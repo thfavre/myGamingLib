@@ -41,6 +41,10 @@
                 <span class="btn-icon">🔄</span>
                 Sync with RAWG
             </button>
+            <button id="addManualBtn" class="btn btn-success">
+                <span class="btn-icon">➕</span>
+                Add Game Manually
+            </button>
             <button id="refreshBtn" class="btn btn-tertiary">
                 <span class="btn-icon">♻️</span>
                 Refresh Library
@@ -105,6 +109,33 @@
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal()">&times;</span>
             <div id="gameDetail"></div>
+        </div>
+    </div>
+
+    <!-- Add Manual Game Modal -->
+    <div id="addGameModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeAddGameModal()">&times;</span>
+            <div id="addGameContent">
+                <h2 style="margin-top: 0;">Add Game to Library</h2>
+
+                <div style="margin-bottom: 20px;">
+                    <input type="text" id="gameSearchInput" placeholder="Search for a game..."
+                           style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box;">
+                    <button id="searchGameBtn" class="btn btn-primary" style="margin-top: 10px; width: 100%;">
+                        <span class="btn-icon">🔍</span>
+                        Search RAWG
+                    </button>
+                </div>
+
+                <div id="searchStatus" style="text-align: center; padding: 20px; color: #666; display: none;">
+                    Searching...
+                </div>
+
+                <div id="searchResults" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Results will be inserted here -->
+                </div>
+            </div>
         </div>
     </div>
 

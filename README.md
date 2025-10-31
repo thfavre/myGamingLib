@@ -9,6 +9,12 @@ A local web application that displays your complete Epic Games library with rich
   - **No CAPTCHA**: Bypasses CAPTCHA by using your trusted browser session
   - **Automatic Pagination**: Navigates through all pages of your purchase history
   - **80-95% Success Rate**: Most reliable method for avoiding Epic's bot detection
+- **Add Games Manually**: Search RAWG and add any game to your library
+  - Search 350,000+ games in the RAWG database
+  - See game details before adding (ratings, genres, platforms)
+  - Automatically fetches full metadata (screenshots, achievements, trailers)
+  - Perfect for adding games from other platforms or missing games
+  - See [MANUAL_GAME_ADDITION.md](MANUAL_GAME_ADDITION.md) for details
 - **RAWG Sync**: Fetch **comprehensive metadata** for each game including:
   - **Player counts**: Local (split-screen, couch co-op) and Online (multiplayer, MMO)
   - **Ratings**: RAWG ratings, Metacritic scores, user reviews
@@ -124,6 +130,16 @@ http://localhost:5000
    - Progress shown in real-time with detailed logs
    - Takes ~3-5 seconds per game (with rate limiting)
    - Refresh the library to see updated games with full metadata
+
+5. **Add Games Manually** (Optional):
+   - Click "Add Game Manually" button
+   - Search for any game in the RAWG database (350,000+ games)
+   - Browse search results with game details
+   - Click "Add to Library" to add with full metadata
+   - Perfect for:
+     - Adding games from other platforms (Steam, GOG, etc.)
+     - Adding games the Epic parser missed
+     - Building a wishlist of games you want
 
 ## Project Structure
 

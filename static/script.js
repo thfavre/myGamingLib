@@ -189,6 +189,9 @@ function showGameDetail(gameId) {
     const game = allGames.find(g => g.id === gameId);
     if (!game) return;
 
+    // Print game info to terminal
+    printGameInfoToTerminal(gameId);
+
     const modal = document.getElementById('gameModal');
     const detailDiv = document.getElementById('gameDetail');
 
@@ -424,7 +427,396 @@ function taskComplete(taskType, result) {
 // Close modal when clicking outside
 window.onclick = function(event) {
     const modal = document.getElementById('gameModal');
+    const addGameModal = document.getElementById('addGameModal');
+
     if (event.target === modal) {
         closeModal();
+    }
+    if (event.target === addGameModal) {
+        closeAddGameModal();
+    }
+}
+
+// ==================== MANUAL GAME ADDITION ====================
+
+function openAddGameModal() {
+    const modal = document.getElementById('addGameModal');
+    modal.style.display = 'flex';
+    document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('gameSearchInput').value = '';
+    document.getElementById('searchStatus').style.display = 'none';
+}
+
+function closeAddGameModal() {
+    const modal = document.getElementById('addGameModal');
+    modal.style.display = 'none';
+}
+
+async function searchRAWG() {
+    const query = document.getElementById('gameSearchInput').value.trim();
+
+    if (!query) {
+        alert('Please enter a game name to search');
+        return;
+    }
+
+    const searchBtn = document.getElementById('searchGameBtn');
+    const searchStatus = document.getElementById('searchStatus');
+    const searchResults = document.getElementById('searchResults');
+
+    // Disable button and show loading
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<span class="btn-icon">⏳</span> Searching...';
+    searchStatus.style.display = 'block';
+    searchStatus.textContent = 'Searching RAWG database...';
+    searchResults.innerHTML = '';
+
+    try {
+        const response = await fetch('/api/search-game', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.results.length > 0) {
+            searchStatus.style.display = 'none';
+            displaySearchResults(data.results);
+        } else {
+            searchStatus.textContent = 'No games found. Try a different search term.';
+            searchStatus.style.color = '#f5576c';
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        searchStatus.textContent = 'Error searching. Please try again.';
+        searchStatus.style.color = '#f5576c';
+    } finally {
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = '<span class="btn-icon">🔍</span> Search RAWG';
+    }
+}
+
+function displaySearchResults(results) {
+    const searchResults = document.getElementById('searchResults');
+    searchResults.innerHTML = results.map(game => `
+        <div class="search-result-card">
+            ${game.background_image ?
+                `<img src="${game.background_image}" alt="${game.name}" class="search-result-image">` :
+                '<div class="search-result-image" style="background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;">No Image</div>'
+            }
+            <div class="search-result-info">
+                <div class="search-result-title">${game.name}</div>
+                <div class="search-result-meta">
+                    ${game.released ? `<span>📅 ${game.released}</span>` : ''}
+                    ${game.rating ? `<span>⭐ ${game.rating}/5</span>` : ''}
+                    ${game.metacritic ? `<span>🎮 ${game.metacritic}/100</span>` : ''}
+                </div>
+                ${game.genres && game.genres.length > 0 ?
+                    `<div class="search-result-genres">${game.genres.join(', ')}</div>` :
+                    ''
+                }
+                ${game.platforms && game.platforms.length > 0 ?
+                    `<div style="font-size: 0.8em; color: #999; margin-top: 5px;">Platforms: ${game.platforms.slice(0, 4).join(', ')}${game.platforms.length > 4 ? '...' : ''}</div>` :
+                    ''
+                }
+                <div class="search-result-actions">
+                    <button class="btn-small btn-add" onclick="addGameToLibrary(${game.id}, '${game.name.replace(/'/g, "\\'")}')">
+                        ➕ Add to Library
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function addGameToLibrary(rawgId, gameName) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Adding...';
+
+    try {
+        const response = await fetch('/api/add-manual-game', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                rawg_id: rawgId,
+                game_name: gameName
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            btn.innerHTML = '✅ Added!';
+            btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)';
+
+            // Show success message
+            alert(`${gameName} has been added to your library with full metadata!\n\n` +
+                  `✅ ${data.metadata.screenshots_count} screenshots\n` +
+                  `✅ ${data.metadata.achievements_count} achievements\n` +
+                  `✅ ${data.metadata.trailers_count} trailers\n` +
+                  `✅ ${data.metadata.stores_count} store links`);
+
+            // Refresh library
+            loadGames();
+            loadStats();
+
+            // Close modal after a delay
+            setTimeout(() => {
+                closeAddGameModal();
+            }, 1500);
+        } else {
+            if (data.already_exists) {
+                alert(`${gameName} is already in your library!`);
+                btn.innerHTML = '✓ Already Added';
+                btn.disabled = true;
+            } else {
+                alert(`Error: ${data.error}`);
+                btn.disabled = false;
+                btn.innerHTML = '➕ Add to Library';
+            }
+        }
+    } catch (error) {
+        console.error('Add game error:', error);
+        alert('Error adding game. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = '➕ Add to Library';
+    }
+}
+
+// Event listeners
+document.getElementById('addManualBtn').addEventListener('click', openAddGameModal);
+document.getElementById('searchGameBtn').addEventListener('click', searchRAWG);
+
+// Allow Enter key to search
+document.getElementById('gameSearchInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchRAWG();
+    }
+});
+
+// ==================== PRINT GAME INFO TO TERMINAL ====================
+
+async function printGameInfoToTerminal(gameId) {
+    try {
+        const game = allGames.find(g => g.id === gameId);
+        if (!game) {
+            console.error(`❌ Game with ID ${gameId} not found`);
+            return;
+        }
+
+        // Print to browser console with beautiful formatting
+        console.log("\n" + "=".repeat(80));
+        console.log(`🎮 GAME DETAILS: ${game.title || 'Unknown'}`);
+        console.log("=".repeat(80));
+
+        // Basic Information
+        console.log("\n📋 BASIC INFORMATION");
+        console.log("-".repeat(80));
+        console.log(`  ID:              ${game.id}`);
+        console.log(`  Title:           ${game.title}`);
+        console.log(`  Original Name:   ${game.name_original || 'N/A'}`);
+        console.log(`  RAWG ID:         ${game.rawg_id || 'N/A'}`);
+        console.log(`  RAWG Slug:       ${game.rawg_slug || 'N/A'}`);
+        console.log(`  Epic ID:         ${game.epic_id || 'N/A'}`);
+
+        // Alternative Names
+        if (game.alternative_names && Array.isArray(game.alternative_names) && game.alternative_names.length > 0) {
+            console.log(`  Alt Names:       ${game.alternative_names.join(', ')}`);
+        }
+
+        // Dates
+        console.log("\n📅 DATES");
+        console.log("-".repeat(80));
+        console.log(`  Release Date:    ${game.release_date || 'N/A'}`);
+        console.log(`  TBA:             ${game.tba ? 'Yes' : 'No'}`);
+        console.log(`  Added to DB:     ${game.created_at || 'N/A'}`);
+        console.log(`  Last Updated:    ${game.updated_at || 'N/A'}`);
+        console.log(`  RAWG Updated:    ${game.updated_at_rawg || 'N/A'}`);
+
+        // Ratings
+        console.log("\n⭐ RATINGS & REVIEWS");
+        console.log("-".repeat(80));
+        console.log(`  RAWG Rating:     ${game.rating || 'N/A'}/5`);
+        console.log(`  Rating Top:      ${game.rating_top || 'N/A'}`);
+        console.log(`  Ratings Count:   ${game.ratings_count || 'N/A'}`);
+        console.log(`  Reviews Count:   ${game.reviews_count || 'N/A'}`);
+        console.log(`  Metacritic:      ${game.metacritic_score || 'N/A'}/100`);
+        console.log(`  Metacritic URL:  ${game.metacritic_url || 'N/A'}`);
+        console.log(`  ESRB Rating:     ${game.esrb_rating || 'N/A'}`);
+
+        // Player Counts (CRITICAL FEATURE)
+        console.log("\n👥 PLAYER COUNTS (LOCAL & ONLINE)");
+        console.log("-".repeat(80));
+        const localMin = game.local_players_min || 'N/A';
+        const localMax = game.local_players_max || 'N/A';
+        const onlineMin = game.online_players_min || 'N/A';
+        const onlineMax = game.online_players_max || 'N/A';
+
+        console.log(`  Local Players:   ${localMin} - ${localMax}`);
+        console.log(`  Online Players:  ${onlineMin} - ${onlineMax}`);
+
+        // Statistics
+        console.log("\n📊 STATISTICS");
+        console.log("-".repeat(80));
+        console.log(`  Playtime:        ${game.playtime || 'N/A'} hours`);
+        console.log(`  Added Count:     ${game.added_count || 'N/A'} users`);
+        console.log(`  Suggestions:     ${game.suggestions_count || 'N/A'}`);
+
+        // Content Counts
+        console.log("\n📸 CONTENT COUNTS");
+        console.log("-".repeat(80));
+        console.log(`  Screenshots:     ${game.screenshots_count || 'N/A'}`);
+        console.log(`  Achievements:    ${game.achievements_count || 'N/A'}`);
+        console.log(`  Movies/Trailers: ${game.movies_count || 'N/A'}`);
+        console.log(`  Creators:        ${game.creators_count || 'N/A'}`);
+
+        // Genres
+        if (game.genres && Array.isArray(game.genres)) {
+            console.log("\n🎯 GENRES");
+            console.log("-".repeat(80));
+            console.log(`  ${game.genres.join(', ')}`);
+        }
+
+        // Platforms
+        if (game.platforms && Array.isArray(game.platforms)) {
+            console.log("\n💻 PLATFORMS");
+            console.log("-".repeat(80));
+            console.log(`  ${game.platforms.join(', ')}`);
+        }
+
+        if (game.parent_platforms && Array.isArray(game.parent_platforms)) {
+            console.log(`  Parent: ${game.parent_platforms.join(', ')}`);
+        }
+
+        // Tags
+        if (game.tags && Array.isArray(game.tags) && game.tags.length > 0) {
+            console.log("\n🏷️  TAGS");
+            console.log("-".repeat(80));
+            console.log(`  ${game.tags.slice(0, 20).join(', ')}`);  // First 20 tags
+            if (game.tags.length > 20) {
+                console.log(`  ... and ${game.tags.length - 20} more`);
+            }
+        }
+
+        // Developers
+        if (game.developers && Array.isArray(game.developers) && game.developers.length > 0) {
+            console.log("\n👨‍💻 DEVELOPERS");
+            console.log("-".repeat(80));
+            game.developers.forEach(dev => {
+                console.log(`  - ${dev.name || 'Unknown'} (ID: ${dev.id || 'N/A'})`);
+            });
+        }
+
+        // Publishers
+        if (game.publishers && Array.isArray(game.publishers) && game.publishers.length > 0) {
+            console.log("\n🏢 PUBLISHERS");
+            console.log("-".repeat(80));
+            game.publishers.forEach(pub => {
+                console.log(`  - ${pub.name || 'Unknown'} (ID: ${pub.id || 'N/A'})`);
+            });
+        }
+
+        // Screenshots
+        if (game.screenshots && Array.isArray(game.screenshots) && game.screenshots.length > 0) {
+            console.log("\n📷 SCREENSHOTS");
+            console.log("-".repeat(80));
+            console.log(`  Total: ${game.screenshots.length}`);
+            game.screenshots.slice(0, 5).forEach((screen, i) => {  // Show first 5
+                if (typeof screen === 'object' && screen.image) {
+                    console.log(`  ${i + 1}. ${screen.image}`);
+                } else {
+                    console.log(`  ${i + 1}. ${screen}`);
+                }
+            });
+            if (game.screenshots.length > 5) {
+                console.log(`  ... and ${game.screenshots.length - 5} more`);
+            }
+        }
+
+        // Achievements
+        if (game.achievements && Array.isArray(game.achievements) && game.achievements.length > 0) {
+            console.log("\n🏆 ACHIEVEMENTS");
+            console.log("-".repeat(80));
+            console.log(`  Total: ${game.achievements.length}`);
+            game.achievements.slice(0, 5).forEach((ach, i) => {  // Show first 5
+                console.log(`  ${i + 1}. ${ach.name || 'Unknown'} - ${ach.percent || 'N/A'}%`);
+            });
+            if (game.achievements.length > 5) {
+                console.log(`  ... and ${game.achievements.length - 5} more`);
+            }
+        }
+
+        // Trailers
+        if (game.trailers && Array.isArray(game.trailers) && game.trailers.length > 0) {
+            console.log("\n🎬 TRAILERS");
+            console.log("-".repeat(80));
+            game.trailers.forEach((trailer, i) => {
+                console.log(`  ${i + 1}. ${trailer.name || 'Unknown'}`);
+                console.log(`     Preview: ${trailer.preview || 'N/A'}`);
+            });
+        }
+
+        // Stores
+        if (game.stores && Array.isArray(game.stores) && game.stores.length > 0) {
+            console.log("\n🛒 WHERE TO BUY");
+            console.log("-".repeat(80));
+            game.stores.forEach(store => {
+                console.log(`  - ${store.store_name || 'Unknown'}`);
+                console.log(`    URL: ${store.url || 'N/A'}`);
+            });
+        }
+
+        // Links
+        console.log("\n🔗 LINKS");
+        console.log("-".repeat(80));
+        console.log(`  Website:         ${game.website || 'N/A'}`);
+        console.log(`  Background Img:  ${game.background_image || 'N/A'}`);
+        console.log(`  Cover Image:     ${game.cover_image || 'N/A'}`);
+
+        // Reddit
+        if (game.reddit_url) {
+            console.log("\n💬 REDDIT COMMUNITY");
+            console.log("-".repeat(80));
+            console.log(`  Subreddit:       ${game.reddit_name || 'N/A'}`);
+            console.log(`  URL:             ${game.reddit_url || 'N/A'}`);
+            console.log(`  Post Count:      ${game.reddit_count || 'N/A'}`);
+            if (game.reddit_description) {
+                console.log(`  Description:     ${game.reddit_description.substring(0, 100)}...`);
+            }
+        }
+
+        // Description
+        if (game.description) {
+            console.log("\n📖 DESCRIPTION");
+            console.log("-".repeat(80));
+            const desc = game.description;
+            // Print first 500 chars
+            if (desc.length > 500) {
+                console.log(`  ${desc.substring(0, 500)}...`);
+                console.log(`  ... (${desc.length} total characters)`);
+            } else {
+                console.log(`  ${desc}`);
+            }
+        }
+
+        // Sync Status
+        console.log("\n✅ SYNC STATUS");
+        console.log("-".repeat(80));
+        console.log(`  Synced with RAWG: ${game.synced_with_rawg ? 'Yes' : 'No'}`);
+
+        console.log("\n" + "=".repeat(80));
+        console.log(`✓ Complete information for: ${game.title}`);
+        console.log("=".repeat(80) + "\n");
+
+        console.log(`Game info for "${game.title}" printed above. Check the browser console for details.`);
+
+    } catch (error) {
+        console.error('Error printing game info:', error);
     }
 }
