@@ -208,15 +208,86 @@ function showGameDetail(gameId) {
     const onlinePlayersText = game.online_players_max ?
         `${game.online_players_min || 1}-${game.online_players_max} Players` : 'N/A';
 
+    // Screenshots section
     const screenshots = game.screenshots && game.screenshots.length > 0 ?
         `<div class="game-detail-section">
-            <h3>Screenshots</h3>
+            <h3>📷 Screenshots (${game.screenshots.length})</h3>
             <div class="screenshots-grid">
                 ${game.screenshots.map(screenshot => {
-                    // Handle both object format {image: "url"} and string format
                     const imageUrl = typeof screenshot === 'object' ? screenshot.image : screenshot;
-                    return `<img src="${imageUrl}" alt="Screenshot" class="screenshot">`;
+                    return `<img src="${imageUrl}" alt="Screenshot" class="screenshot" onclick="window.open('${imageUrl}', '_blank')">`;
                 }).join('')}
+            </div>
+        </div>` : '';
+
+    // Achievements section
+    const achievements = game.achievements && game.achievements.length > 0 ?
+        `<div class="game-detail-section">
+            <h3>🏆 Achievements (${game.achievements.length})</h3>
+            <div class="achievements-grid" id="achievements-${game.id}">
+                ${game.achievements.slice(0, 5).map(ach => `
+                    <div class="achievement-card">
+                        <div class="achievement-name">${ach.name || 'Unknown'}</div>
+                        <div class="achievement-percent">${ach.percent || 'N/A'}%</div>
+                        ${ach.description ? `<div class="achievement-desc">${ach.description}</div>` : ''}
+                    </div>
+                `).join('')}
+                ${game.achievements.length > 5 ? `
+                    <div class="achievement-more">
+                        <button class="expand-btn" onclick="expandAchievements(${game.id})">
+                            +${game.achievements.length - 5} more achievements
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        </div>` : '';
+
+    // Store links section
+    const storeLinks = game.stores && game.stores.length > 0 ?
+        `<div class="game-detail-section">
+            <h3>🛒 Where to Buy</h3>
+            <div class="store-links">
+                ${game.stores.map(store => `
+                    <a href="${store.url}" target="_blank" class="store-link">
+                        <span class="store-name">${store.store_name || 'Game Store'}</span>
+                        <span class="store-icon">🔗</span>
+                    </a>
+                `).join('')}
+            </div>
+        </div>` : '';
+
+    // Tags section
+    const tags = game.tags && game.tags.length > 0 ?
+        `<div class="game-detail-section">
+            <h3>🏷️ Tags</h3>
+            <div class="tags-container" id="tags-${game.id}">
+                ${game.tags.slice(0, 15).map(tag => `<span class="tag-pill">${tag}</span>`).join('')}
+                ${game.tags.length > 15 ? `
+                    <button class="tag-more expand-btn" onclick="expandTags(${game.id})">
+                        +${game.tags.length - 15} more
+                    </button>
+                ` : ''}
+            </div>
+        </div>` : '';
+
+    // Developers & Publishers
+    const developers = game.developers && game.developers.length > 0 ?
+        game.developers.map(dev => dev.name || 'Unknown').join(', ') : 'Unknown';
+    
+    const publishers = game.publishers && game.publishers.length > 0 ?
+        game.publishers.map(pub => pub.name || 'Unknown').join(', ') : 'Unknown';
+
+    // Trailers section
+    const trailers = game.trailers && game.trailers.length > 0 ?
+        `<div class="game-detail-section">
+            <h3>🎬 Trailers & Videos (${game.trailers.length})</h3>
+            <div class="trailers-grid">
+                ${game.trailers.map(trailer => `
+                    <div class="trailer-card">
+                        ${trailer.preview ? `<img src="${trailer.preview}" alt="${trailer.name}" class="trailer-preview">` : ''}
+                        <div class="trailer-name">${trailer.name || 'Video'}</div>
+                    </div>
+                `).join('')}
             </div>
         </div>` : '';
 
@@ -224,41 +295,86 @@ function showGameDetail(gameId) {
         <div class="game-detail-header">
             <h2 class="game-detail-title">${game.title}</h2>
             <div class="game-detail-meta">
-                <span class="meta-badge badge-rating">★ ${rating}</span>
-                <span class="meta-badge badge-rating">Metacritic: ${metacritic}</span>
-                <span class="meta-badge badge-date">${releaseDate}</span>
+                <span class="meta-badge badge-rating">⭐ ${rating}/5</span>
+                ${metacritic !== 'N/A' ? `<span class="meta-badge badge-rating">🎮 ${metacritic}/100</span>` : ''}
+                <span class="meta-badge badge-date">📅 ${releaseDate}</span>
             </div>
-        </div>
 
         ${imageUrl ? `<img src="${imageUrl}" alt="${game.title}" class="game-detail-image">` : ''}
 
-        <div class="game-detail-section">
-            <h3>Player Information (Critical Feature)</h3>
-            <div class="player-info">
-                <div class="player-info-box">
-                    <h4>Local Multiplayer</h4>
-                    <div class="player-count">${localPlayersText}</div>
+        <div class="game-detail-grid">
+            <div class="game-detail-main">
+                <div class="game-detail-section">
+                    <h3>📖 Description</h3>
+                    <div class="game-description">${description.replace(/\n/g, '<br>')}</div>
                 </div>
-                <div class="player-info-box">
-                    <h4>Online Multiplayer</h4>
-                    <div class="player-count">${onlinePlayersText}</div>
+
+                ${screenshots}
+                ${achievements}
+                ${trailers}
+            </div>
+
+            <div class="game-detail-sidebar">
+                <div class="game-detail-section">
+                    <h3>👥 Player Information</h3>
+                    <div class="player-info-compact">
+                        <div class="player-info-item">
+                            <span class="player-label">Local:</span>
+                            <span class="player-value">${localPlayersText}</span>
+                        </div>
+                        <div class="player-info-item">
+                            <span class="player-label">Online:</span>
+                            <span class="player-value">${onlinePlayersText}</span>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="game-detail-section">
+                    <h3>📊 Game Stats</h3>
+                    <div class="game-stats">
+                        ${game.ratings_count ? `<div class="stat-item"><span class="stat-label">Reviews:</span> <span class="stat-value">${game.ratings_count}</span></div>` : ''}
+                        ${game.added_count ? `<div class="stat-item"><span class="stat-label">Players:</span> <span class="stat-value">${game.added_count}</span></div>` : ''}
+                        ${game.playtime ? `<div class="stat-item"><span class="stat-label">Avg Playtime:</span> <span class="stat-value">${game.playtime}h</span></div>` : ''}
+                        ${game.achievements_count ? `<div class="stat-item"><span class="stat-label">Achievements:</span> <span class="stat-value">${game.achievements_count}</span></div>` : ''}
+                    </div>
+                </div>
+
+                <div class="game-detail-section">
+                    <h3>ℹ️ Game Details</h3>
+                    <div class="game-details-list">
+                        <div class="detail-item">
+                            <span class="detail-label">Genres:</span>
+                            <span class="detail-value">${genres}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Platforms:</span>
+                            <span class="detail-value">${platforms}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Developer:</span>
+                            <span class="detail-value">${developers}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Publisher:</span>
+                            <span class="detail-value">${publishers}</span>
+                        </div>
+                        ${game.esrb_rating ? `
+                        <div class="detail-item">
+                            <span class="detail-label">ESRB:</span>
+                            <span class="detail-value">${game.esrb_rating}</span>
+                        </div>` : ''}
+                        ${game.website ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Website:</span>
+                            <a href="${game.website}" target="_blank" class="detail-link">Visit 🔗</a>
+                        </div>` : ''}
+                    </div>
+                </div>
+
+                ${storeLinks}
+                ${tags}
             </div>
         </div>
-
-        <div class="game-detail-section">
-            <h3>Description</h3>
-            <p>${description}</p>
-        </div>
-
-        <div class="game-detail-section">
-            <h3>Details</h3>
-            <p><strong>Genres:</strong> ${genres}</p>
-            <p><strong>Platforms:</strong> ${platforms}</p>
-            ${game.esrb_rating ? `<p><strong>ESRB Rating:</strong> ${game.esrb_rating}</p>` : ''}
-        </div>
-
-        ${screenshots}
     `;
 
     modal.style.display = 'flex';
@@ -823,4 +939,78 @@ async function printGameInfoToTerminal(gameId) {
     } catch (error) {
         console.error('Error printing game info:', error);
     }
+}
+
+// ==================== EXPAND FUNCTIONALITY ====================
+
+function expandAchievements(gameId) {
+    const game = allGames.find(g => g.id === gameId);
+    if (!game || !game.achievements) return;
+
+    const container = document.getElementById(`achievements-${gameId}`);
+    
+    // Replace the grid with all achievements
+    container.innerHTML = game.achievements.map(ach => `
+        <div class="achievement-card">
+            <div class="achievement-name">${ach.name || 'Unknown'}</div>
+            <div class="achievement-percent">${ach.percent || 'N/A'}%</div>
+            ${ach.description ? `<div class="achievement-desc">${ach.description}</div>` : ''}
+        </div>
+    `).join('') + `
+        <div class="achievement-more">
+            <button class="expand-btn collapse-btn" onclick="collapseAchievements(${gameId})">
+                Show less
+            </button>
+        </div>
+    `;
+}
+
+function collapseAchievements(gameId) {
+    const game = allGames.find(g => g.id === gameId);
+    if (!game || !game.achievements) return;
+
+    const container = document.getElementById(`achievements-${gameId}`);
+    
+    // Show only first 5 achievements again
+    container.innerHTML = game.achievements.slice(0, 5).map(ach => `
+        <div class="achievement-card">
+            <div class="achievement-name">${ach.name || 'Unknown'}</div>
+            <div class="achievement-percent">${ach.percent || 'N/A'}%</div>
+            ${ach.description ? `<div class="achievement-desc">${ach.description}</div>` : ''}
+        </div>
+    `).join('') + `
+        <div class="achievement-more">
+            <button class="expand-btn" onclick="expandAchievements(${gameId})">
+                +${game.achievements.length - 5} more achievements
+            </button>
+        </div>
+    `;
+}
+
+function expandTags(gameId) {
+    const game = allGames.find(g => g.id === gameId);
+    if (!game || !game.tags) return;
+
+    const container = document.getElementById(`tags-${gameId}`);
+    
+    // Show all tags
+    container.innerHTML = game.tags.map(tag => `<span class="tag-pill">${tag}</span>`).join('') + `
+        <button class="tag-more expand-btn collapse-btn" onclick="collapseTags(${gameId})">
+            Show less
+        </button>
+    `;
+}
+
+function collapseTags(gameId) {
+    const game = allGames.find(g => g.id === gameId);
+    if (!game || !game.tags) return;
+
+    const container = document.getElementById(`tags-${gameId}`);
+    
+    // Show only first 15 tags again
+    container.innerHTML = game.tags.slice(0, 15).map(tag => `<span class="tag-pill">${tag}</span>`).join('') + `
+        <button class="tag-more expand-btn" onclick="expandTags(${gameId})">
+            +${game.tags.length - 15} more
+        </button>
+    `;
 }

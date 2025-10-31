@@ -476,9 +476,9 @@ def print_game_info(game_id):
             if isinstance(tags, list) and len(tags) > 0:
                 print("\n🏷️  TAGS")
                 print("-" * 80)
-                print(f"  {', '.join(tags[:20])}")  # First 20 tags
-                if len(tags) > 20:
-                    print(f"  ... and {len(tags) - 20} more")
+                print(f"  {', '.join(tags[:30])}")  # First 30 tags
+                if len(tags) > 30:
+                    print(f"  ... and {len(tags) - 30} more")
 
         # Developers
         if game.get('developers'):
