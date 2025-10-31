@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic Games Library Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>Epic Games Library Dashboard</h1>
+            <div class="stats-bar" id="statsBar">
+                <div class="stat">
+                    <span class="stat-label">Total Games:</span>
+                    <span class="stat-value" id="totalGames">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Synced:</span>
+                    <span class="stat-value" id="syncedGames">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Local MP:</span>
+                    <span class="stat-value" id="localMpGames">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Online MP:</span>
+                    <span class="stat-value" id="onlineMpGames">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button id="parseEpicBtn" class="btn btn-primary">
+                <span class="btn-icon">🎮</span>
+                Parse Epic Games
+            </button>
+            <button id="syncBtn" class="btn btn-secondary">
+                <span class="btn-icon">🔄</span>
+                Sync with RAWG
+            </button>
+            <button id="refreshBtn" class="btn btn-tertiary">
+                <span class="btn-icon">♻️</span>
+                Refresh Library
+            </button>
+        </div>
+
+        <!-- Task Status Panels -->
+        <div class="status-panels">
+            <div class="status-panel" id="scrapingPanel" style="display: none;">
+                <div class="status-header">
+                    <h3>Epic Games Scraping</h3>
+                    <button class="close-btn" onclick="closePanel('scrapingPanel')">&times;</button>
+                </div>
+                <div id="continueButtonContainer" style="display: none; text-align: center; padding: 20px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin-bottom: 10px; font-size: 1.1em; color: #4caf50;">✓ Chrome opened! Please log into Epic Games and navigate to your purchases page.</p>
+                    <button id="continueParsingBtn" class="btn" style="background: #4caf50; color: white; padding: 12px 30px;">
+                        <span class="btn-icon">▶️</span>
+                        Continue
+                    </button>
+                </div>
+                <div class="status-logs" id="scrapingLogs"></div>
+            </div>
+
+            <div class="status-panel" id="syncingPanel" style="display: none;">
+                <div class="status-header">
+                    <h3>RAWG Metadata Sync</h3>
+                    <button class="close-btn" onclick="closePanel('syncingPanel')">&times;</button>
+                </div>
+                <div class="status-logs" id="syncingLogs"></div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Search games..." class="search-input">
+            <div class="filters">
+                <select id="genreFilter" class="filter-select">
+                    <option value="">All Genres</option>
+                </select>
+                <select id="playerFilter" class="filter-select">
+                    <option value="">All Games</option>
+                    <option value="local">Local Multiplayer</option>
+                    <option value="online">Online Multiplayer</option>
+                    <option value="singleplayer">Single Player Only</option>
+                </select>
+                <select id="sortBy" class="filter-select">
+                    <option value="title">Sort by Title</option>
+                    <option value="rating">Sort by Rating</option>
+                    <option value="release_date">Sort by Release Date</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Games Grid -->
+        <div id="gamesGrid" class="games-grid">
+            <div class="loading">Loading games...</div>
+        </div>
+    </div>
+
+    <!-- Game Detail Modal -->
+    <div id="gameModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div id="gameDetail"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

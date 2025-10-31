@@ -1,0 +1,7 @@
+flask==3.0.0
+selenium==4.16.0
+requests==2.31.0
+webdriver-manager==4.0.1
+python-dotenv==1.0.0
+setuptools>=65.5.0
+undetected-chromedriver>=3.5.4
