@@ -2,6 +2,9 @@
 
 A local web application that displays your complete Epic Games library with rich metadata from RAWG API. Browse your games with detailed information including **local/online player counts**, genres, ratings, screenshots, and more.
 
+<img width="2036" height="1018" alt="image" src="https://github.com/user-attachments/assets/baef49ee-b1d5-403e-ac26-ec9e91d214e8" />
+
+
 ## Features
 
 - **Parse Epic Games**: Visible browser automation to scrape your entire Epic Games library
