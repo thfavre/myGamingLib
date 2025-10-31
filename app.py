@@ -4,6 +4,7 @@ import traceback
 from database import get_all_games, get_game_count, add_game, update_game_metadata
 from scraper_simple import open_chrome_browser, start_parsing_now, close_chrome_browser
 from rawg_sync import sync_with_rawg, RAWGSyncer
+from igdb_sync import IGDBSyncer
 
 app = Flask(__name__)
 
@@ -588,6 +589,56 @@ def print_game_info(game_id):
     except Exception as e:
         print(f"\n❌ Error printing game info: {str(e)}\n")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sync-igdb', methods=['POST'])
+def sync_with_igdb():
+    """
+    Sync a game with IGDB API to get detailed information by searching for the game name.
+    """
+    try:
+        data = request.get_json()
+        game_title = data.get('game_title', '').strip()
+
+        if not game_title:
+            return jsonify({
+                'success': False,
+                'error': 'No game title provided'
+            }), 400
+
+        syncer = IGDBSyncer()
+
+        # Search for the game by title
+        search_result = syncer.search_game(game_title)
+
+        if not search_result:
+            return jsonify({
+                'success': False,
+                'error': f'No game found on IGDB for "{game_title}". Try checking the game name or IGDB credentials.'
+            }), 404
+
+        # Get full details using the found game ID
+        game_id = search_result.get('id')
+        game_data = syncer.get_game_details(game_id)
+
+        if game_data:
+            return jsonify({
+                'success': True,
+                'message': f'Successfully fetched game data from IGDB',
+                'game_name': search_result.get('name'),
+                'igdb_id': game_id,
+                'data': game_data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to fetch game data from IGDB. Check your credentials in .env file.'
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     print("=" * 60)

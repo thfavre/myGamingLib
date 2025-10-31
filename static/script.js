@@ -300,6 +300,18 @@ function showGameDetail(gameId) {
                 <span class="meta-badge badge-date">📅 ${releaseDate}</span>
             </div>
 
+            <!-- IGDB Sync Section -->
+            <div style="margin: 20px 0; padding: 15px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border: 2px solid #4caf50;">
+                <h3 style="margin-top: 0; color: #4caf50;">🎮 Sync with IGDB</h3>
+                <p style="margin: 10px 0; font-size: 0.9em; color: #ccc;">Fetch detailed game information from the IGDB database</p>
+                <button onclick="syncWithIGDB(${game.id}, '${game.title.replace(/'/g, "\\'")}', event)" class="btn" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%); padding: 12px 24px; width: 100%;">
+                    <span class="btn-icon">🔄</span> Sync with IGDB
+                </button>
+                <div id="igdbResponse-${game.id}" style="margin-top: 15px; display: none;">
+                    <!-- IGDB response will be displayed here -->
+                </div>
+            </div>
+
         ${imageUrl ? `<img src="${imageUrl}" alt="${game.title}" class="game-detail-image">` : ''}
 
         <div class="game-detail-grid">
@@ -939,6 +951,125 @@ async function printGameInfoToTerminal(gameId) {
     } catch (error) {
         console.error('Error printing game info:', error);
     }
+}
+
+// ==================== IGDB SYNC FUNCTIONALITY ====================
+
+async function syncWithIGDB(gameId, gameTitle, event) {
+    // Prevent button from being clicked multiple times
+    if (event) {
+        event.target.disabled = true;
+    }
+
+    const responseDiv = document.getElementById(`igdbResponse-${gameId}`);
+    responseDiv.style.display = 'block';
+    responseDiv.innerHTML = '<p style="text-align: center; color: #4caf50;">⏳ Searching IGDB for "' + gameTitle + '"...</p>';
+
+    try {
+        const response = await fetch('/api/sync-igdb', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                game_title: gameTitle
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Format the response data nicely
+            const gameData = data.data;
+
+            let html = `
+                <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #4caf50;">
+                    <h3 style="color: #4caf50; margin-top: 0;">✓ IGDB Data Retrieved Successfully!</h3>
+                    <p style="color: #8bc34a; margin: 5px 0;">
+                        <strong>Matched Game:</strong> ${data.game_name} (IGDB ID: ${data.igdb_id})
+                    </p>
+
+                    <div style="max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 0.85em;">
+            `;
+
+            // Display all fields from the game data
+            for (const [key, value] of Object.entries(gameData)) {
+                let displayValue;
+
+                if (value === null || value === undefined) {
+                    displayValue = '<em style="color: #666;">N/A</em>';
+                } else if (Array.isArray(value)) {
+                    displayValue = `<span style="color: #8bc34a;">[Array: ${value.length} items]</span>`;
+                    if (value.length > 0 && value.length <= 10) {
+                        displayValue += `<br><span style="margin-left: 20px; color: #ccc;">${JSON.stringify(value, null, 2)}</span>`;
+                    }
+                } else if (typeof value === 'object') {
+                    displayValue = `<span style="color: #8bc34a;">[Object]</span><br><span style="margin-left: 20px; color: #ccc;">${JSON.stringify(value, null, 2)}</span>`;
+                } else if (typeof value === 'boolean') {
+                    displayValue = `<span style="color: ${value ? '#4caf50' : '#f44336'};">${value}</span>`;
+                } else if (typeof value === 'number') {
+                    displayValue = `<span style="color: #ffc107;">${value}</span>`;
+                } else {
+                    displayValue = `<span style="color: #fff;">${value}</span>`;
+                }
+
+                html += `
+                    <div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                        <strong style="color: #4caf50;">${key}:</strong> ${displayValue}
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                        <p style="font-size: 0.9em; color: #999; margin: 0;">
+                            📋 Complete game data from IGDB API displayed above.
+                        </p>
+                        <button onclick="closeIGDBResponse(${gameId})" class="btn" style="margin-top: 10px; background: #666;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            responseDiv.innerHTML = html;
+        } else {
+            responseDiv.innerHTML = `
+                <div style="background: rgba(244, 67, 54, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #f44336;">
+                    <h4 style="color: #f44336; margin-top: 0;">❌ Error</h4>
+                    <p style="color: #ccc;">${data.error || 'Failed to sync with IGDB'}</p>
+                    <p style="font-size: 0.85em; color: #999;">Make sure you have configured your IGDB credentials in the .env file.</p>
+                    <button onclick="closeIGDBResponse(${gameId})" class="btn" style="margin-top: 10px; background: #666;">
+                        Close
+                    </button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('IGDB sync error:', error);
+        responseDiv.innerHTML = `
+            <div style="background: rgba(244, 67, 54, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #f44336;">
+                <h4 style="color: #f44336; margin-top: 0;">❌ Error</h4>
+                <p style="color: #ccc;">Network error: ${error.message}</p>
+                <button onclick="closeIGDBResponse(${gameId})" class="btn" style="margin-top: 10px; background: #666;">
+                    Close
+                </button>
+            </div>
+        `;
+    } finally {
+        // Re-enable the button
+        if (event && event.target) {
+            event.target.disabled = false;
+        }
+    }
+}
+
+function closeIGDBResponse(gameId) {
+    const responseDiv = document.getElementById(`igdbResponse-${gameId}`);
+    responseDiv.style.display = 'none';
+    responseDiv.innerHTML = '';
 }
 
 // ==================== EXPAND FUNCTIONALITY ====================
