@@ -212,7 +212,11 @@ function showGameDetail(gameId) {
         `<div class="game-detail-section">
             <h3>Screenshots</h3>
             <div class="screenshots-grid">
-                ${game.screenshots.map(url => `<img src="${url}" alt="Screenshot" class="screenshot">`).join('')}
+                ${game.screenshots.map(screenshot => {
+                    // Handle both object format {image: "url"} and string format
+                    const imageUrl = typeof screenshot === 'object' ? screenshot.image : screenshot;
+                    return `<img src="${imageUrl}" alt="Screenshot" class="screenshot">`;
+                }).join('')}
             </div>
         </div>` : '';
 
