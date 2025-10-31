@@ -44,6 +44,46 @@ def init_db():
         )
     """)
 
+    # Add new columns for extended RAWG metadata (if they don't exist)
+    new_columns = [
+        ("name_original", "TEXT"),
+        ("website", "TEXT"),
+        ("rating_top", "INTEGER"),
+        ("playtime", "INTEGER"),
+        ("achievements_count", "INTEGER"),
+        ("screenshots_count", "INTEGER"),
+        ("movies_count", "INTEGER"),
+        ("creators_count", "INTEGER"),
+        ("reddit_url", "TEXT"),
+        ("reddit_name", "TEXT"),
+        ("reddit_description", "TEXT"),
+        ("reddit_logo", "TEXT"),
+        ("reddit_count", "INTEGER"),
+        ("metacritic_url", "TEXT"),
+        ("ratings_count", "INTEGER"),
+        ("reviews_count", "INTEGER"),
+        ("alternative_names", "TEXT"),  # JSON
+        ("achievements", "TEXT"),  # JSON
+        ("trailers", "TEXT"),  # JSON
+        ("stores", "TEXT"),  # JSON
+        ("developers", "TEXT"),  # JSON
+        ("publishers", "TEXT"),  # JSON
+        ("parent_platforms", "TEXT"),  # JSON
+        ("background_image_additional", "TEXT"),
+        ("tba", "BOOLEAN"),  # To Be Announced
+        ("updated_at_rawg", "TEXT"),  # Last updated on RAWG
+        ("added_count", "INTEGER"),  # Number of users who added this game
+        ("suggestions_count", "INTEGER")
+    ]
+
+    # Try to add each column (will silently fail if column already exists)
+    for column_name, column_type in new_columns:
+        try:
+            cursor.execute(f"ALTER TABLE games ADD COLUMN {column_name} {column_type}")
+        except Exception:
+            # Column already exists, skip
+            pass
+
     conn.commit()
     conn.close()
 
@@ -87,6 +127,13 @@ def update_game_metadata(game_id: int, metadata: Dict) -> bool:
     genres_json = json.dumps(metadata.get('genres', []))
     platforms_json = json.dumps(metadata.get('platforms', []))
     tags_json = json.dumps(metadata.get('tags', []))
+    alternative_names_json = json.dumps(metadata.get('alternative_names', []))
+    achievements_json = json.dumps(metadata.get('achievements', []))
+    trailers_json = json.dumps(metadata.get('trailers', []))
+    stores_json = json.dumps(metadata.get('stores', []))
+    developers_json = json.dumps(metadata.get('developers', []))
+    publishers_json = json.dumps(metadata.get('publishers', []))
+    parent_platforms_json = json.dumps(metadata.get('parent_platforms', []))
 
     cursor.execute("""
         UPDATE games SET
@@ -107,6 +154,34 @@ def update_game_metadata(game_id: int, metadata: Dict) -> bool:
             platforms = ?,
             tags = ?,
             esrb_rating = ?,
+            name_original = ?,
+            website = ?,
+            rating_top = ?,
+            playtime = ?,
+            achievements_count = ?,
+            screenshots_count = ?,
+            movies_count = ?,
+            creators_count = ?,
+            reddit_url = ?,
+            reddit_name = ?,
+            reddit_description = ?,
+            reddit_logo = ?,
+            reddit_count = ?,
+            metacritic_url = ?,
+            ratings_count = ?,
+            reviews_count = ?,
+            alternative_names = ?,
+            achievements = ?,
+            trailers = ?,
+            stores = ?,
+            developers = ?,
+            publishers = ?,
+            parent_platforms = ?,
+            background_image_additional = ?,
+            tba = ?,
+            updated_at_rawg = ?,
+            added_count = ?,
+            suggestions_count = ?,
             updated_at = ?,
             synced_with_rawg = 1
         WHERE id = ?
@@ -128,6 +203,34 @@ def update_game_metadata(game_id: int, metadata: Dict) -> bool:
         platforms_json,
         tags_json,
         metadata.get('esrb_rating'),
+        metadata.get('name_original'),
+        metadata.get('website'),
+        metadata.get('rating_top'),
+        metadata.get('playtime'),
+        metadata.get('achievements_count'),
+        metadata.get('screenshots_count'),
+        metadata.get('movies_count'),
+        metadata.get('creators_count'),
+        metadata.get('reddit_url'),
+        metadata.get('reddit_name'),
+        metadata.get('reddit_description'),
+        metadata.get('reddit_logo'),
+        metadata.get('reddit_count'),
+        metadata.get('metacritic_url'),
+        metadata.get('ratings_count'),
+        metadata.get('reviews_count'),
+        alternative_names_json,
+        achievements_json,
+        trailers_json,
+        stores_json,
+        developers_json,
+        publishers_json,
+        parent_platforms_json,
+        metadata.get('background_image_additional'),
+        metadata.get('tba'),
+        metadata.get('updated_at_rawg'),
+        metadata.get('added_count'),
+        metadata.get('suggestions_count'),
         datetime.now().isoformat(),
         game_id
     ))
@@ -149,14 +252,17 @@ def get_all_games() -> List[Dict]:
     for row in rows:
         game = dict(row)
         # Parse JSON fields
-        if game['screenshots']:
-            game['screenshots'] = json.loads(game['screenshots'])
-        if game['genres']:
-            game['genres'] = json.loads(game['genres'])
-        if game['platforms']:
-            game['platforms'] = json.loads(game['platforms'])
-        if game['tags']:
-            game['tags'] = json.loads(game['tags'])
+        json_fields = [
+            'screenshots', 'genres', 'platforms', 'tags',
+            'alternative_names', 'achievements', 'trailers',
+            'stores', 'developers', 'publishers', 'parent_platforms'
+        ]
+        for field in json_fields:
+            if field in game and game[field]:
+                try:
+                    game[field] = json.loads(game[field])
+                except:
+                    game[field] = []
         games.append(game)
 
     return games

@@ -9,13 +9,18 @@ A local web application that displays your complete Epic Games library with rich
   - **No CAPTCHA**: Bypasses CAPTCHA by using your trusted browser session
   - **Automatic Pagination**: Navigates through all pages of your purchase history
   - **80-95% Success Rate**: Most reliable method for avoiding Epic's bot detection
-- **RAWG Sync**: Fetch comprehensive metadata for each game including:
-  - Local player counts (1-4 players, split-screen, etc.)
-  - Online multiplayer information
-  - Genres, platforms, and tags
-  - Release dates and ratings
-  - Screenshots and cover art
-  - Detailed descriptions
+- **RAWG Sync**: Fetch **comprehensive metadata** for each game including:
+  - **Player counts**: Local (split-screen, couch co-op) and Online (multiplayer, MMO)
+  - **Ratings**: RAWG ratings, Metacritic scores, user reviews
+  - **Visual assets**: Background images, screenshots (with full dimensions)
+  - **Media**: Trailers, gameplay videos
+  - **Achievements**: Full achievement list with completion percentages
+  - **Store links**: Where to buy (Steam, Epic, GOG, etc.)
+  - **Developers & Publishers**: Complete development team information
+  - **Community**: Reddit integration, playtime statistics
+  - **Categories**: Genres, platforms, tags, ESRB ratings
+  - **Game details**: Descriptions, release dates, alternative names
+  - See [RAWG_COMPREHENSIVE_SYNC.md](RAWG_COMPREHENSIVE_SYNC.md) for complete list
 - **Rich Dashboard**: Browse, search, and filter your library
 - **Local Storage**: All data stored locally in SQLite database
 
@@ -108,11 +113,17 @@ http://localhost:5000
    - Games are saved to database
    - Chrome closes after 5 seconds
 
-4. **Sync with RAWG**:
+4. **Sync with RAWG** (Fetch comprehensive metadata):
    - Click "Sync with RAWG"
-   - The app will fetch metadata for each game
-   - Progress is shown in real-time
-   - Refresh the library to see updated games
+   - The app fetches **5 API endpoints per game**:
+     - Game details (description, ratings, etc.)
+     - Screenshots (full quality collection)
+     - Achievements (with completion %)
+     - Trailers & videos
+     - Store purchase links
+   - Progress shown in real-time with detailed logs
+   - Takes ~3-5 seconds per game (with rate limiting)
+   - Refresh the library to see updated games with full metadata
 
 ## Project Structure
 
@@ -145,7 +156,12 @@ myGamingLib/
 - Scraper uses your Epic Games **purchases page** which lists all games you've acquired (including free games)
 - The scraper **automatically navigates through all pages** of your purchase history
 - You need to **manually log in** to Epic Games when prompted
-- The RAWG API has rate limits - syncing may take time for large libraries
+- **RAWG Sync**:
+  - Fetches **comprehensive metadata** from 5 different API endpoints per game
+  - Includes screenshots, achievements, trailers, store links, and more
+  - Rate limited to respect RAWG API free tier (1 second between games)
+  - Takes ~3-5 seconds per game for complete sync
+  - All metadata stored locally in SQLite database
 - All data is stored **locally** in `epic_games_library.db`
 
 ## Troubleshooting
