@@ -1,9 +1,16 @@
 import sqlite3
 import json
+import os
 from datetime import datetime
 from typing import List, Dict, Optional
 
-DATABASE_NAME = "epic_games_library.db"
+# Get the project root directory (two levels up from this file)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DATABASE_NAME = os.path.join(DATA_DIR, "epic_games_library.db")
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
 
 def get_db_connection():
     """Create a database connection."""

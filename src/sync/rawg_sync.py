@@ -3,7 +3,7 @@ import time
 import os
 from typing import Dict, Optional, List
 from dotenv import load_dotenv
-from database import get_games_without_rawg_sync, update_game_metadata, get_all_games
+from src.database import get_games_without_rawg_sync, update_game_metadata, get_all_games
 
 # Load environment variables
 load_dotenv()

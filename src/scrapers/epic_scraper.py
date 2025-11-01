@@ -9,7 +9,7 @@ import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 import time
 import random
-from database import add_game
+from src.database import add_game
 
 class SimpleEpicGamesScraper:
     def __init__(self):

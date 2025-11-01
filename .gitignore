@@ -3,7 +3,8 @@
 
 # Database
 *.db
-epic_games_library.db
+data/epic_games_library.db
+data/*.db
 
 # Python
 __pycache__/

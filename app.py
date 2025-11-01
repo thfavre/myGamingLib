@@ -1,10 +1,10 @@
 from flask import Flask, render_template, jsonify, request
 from threading import Thread
 import traceback
-from database import get_all_games, get_game_count, add_game, update_game_metadata
-from scraper_simple import open_chrome_browser, start_parsing_now, close_chrome_browser
-from rawg_sync import sync_with_rawg, RAWGSyncer
-from igdb_sync import IGDBSyncer
+from src.database import get_all_games, get_game_count, add_game, update_game_metadata
+from src.scrapers.epic_scraper import open_chrome_browser, start_parsing_now, close_chrome_browser
+from src.sync.rawg_sync import sync_with_rawg, RAWGSyncer
+from src.sync.igdb_sync import IGDBSyncer
 
 app = Flask(__name__)
 
