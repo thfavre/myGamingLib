@@ -2,6 +2,9 @@
 
 A local web application that displays your complete Epic Games library with rich metadata from RAWG API.
 
+<img width="2036" height="1018" alt="image" src="https://github.com/user-attachments/assets/baef49ee-b1d5-403e-ac26-ec9e91d214e8" />
+
+
 ## Features
 
 - Parse Epic Games library using Chrome profile (avoids CAPTCHA)
