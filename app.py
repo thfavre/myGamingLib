@@ -218,12 +218,12 @@ def start_syncing():
 @app.route('/api/status/<task_type>', methods=['GET'])
 def get_task_status(task_type):
     """
-    Get status of a background task (scraping or syncing).
+    Get status of a background task.
 
     Args:
-        task_type: 'scraping' or 'syncing'
+        task_type: 'scraping', 'syncing', or 'igdb'
     """
-    if task_type not in ['scraping', 'syncing']:
+    if task_type not in ['scraping', 'syncing', 'igdb']:
         return jsonify({
             'success': False,
             'error': 'Invalid task type'
@@ -241,7 +241,7 @@ def get_task_status(task_type):
 @app.route('/api/clear-logs/<task_type>', methods=['POST'])
 def clear_logs(task_type):
     """Clear logs for a specific task."""
-    if task_type not in ['scraping', 'syncing']:
+    if task_type not in ['scraping', 'syncing', 'igdb']:
         return jsonify({
             'success': False,
             'error': 'Invalid task type'
