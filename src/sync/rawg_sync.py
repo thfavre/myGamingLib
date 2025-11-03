@@ -1,28 +1,27 @@
+"""
+RAWG API Sync Module
+Fetches comprehensive game metadata from RAWG API and stores with rawg__ prefix
+"""
+
 import requests
 import time
 import os
 from typing import Dict, Optional, List
 from dotenv import load_dotenv
-from src.database import get_games_without_rawg_sync, update_game_metadata, get_all_games
+from src.database import get_games_without_rawg_sync, update_game_with_rawg_data, get_all_games
 
 # Load environment variables
 load_dotenv()
 
 # RAWG API configuration
-# Get your free API key at: https://rawg.io/apidocs
 RAWG_API_KEY = os.getenv("RAWG_API_KEY", "")
 RAWG_BASE_URL = "https://api.rawg.io/api"
 REQUEST_DELAY = 1.0  # Delay between requests to respect rate limits
 
+
 class RAWGSyncer:
     def __init__(self, api_key: str = None, callback=None):
-        """
-        Initialize the RAWG API syncer.
-
-        Args:
-            api_key: RAWG API key (get from https://rawg.io/apidocs)
-            callback: Optional function to call with status updates
-        """
+        """Initialize the RAWG API syncer."""
         self.api_key = api_key or RAWG_API_KEY
         self.callback = callback
         self.session = requests.Session()
@@ -34,15 +33,7 @@ class RAWGSyncer:
             self.callback(message)
 
     def search_game(self, game_title: str) -> Optional[Dict]:
-        """
-        Search for a game on RAWG by title.
-
-        Args:
-            game_title: The name of the game to search for
-
-        Returns:
-            dict: Game data if found, None otherwise
-        """
+        """Search for a game on RAWG by title."""
         self._log(f"Searching RAWG for: {game_title}")
 
         try:
@@ -68,15 +59,7 @@ class RAWGSyncer:
             return None
 
     def get_game_details(self, game_id: int) -> Optional[Dict]:
-        """
-        Get detailed information about a game from RAWG.
-
-        Args:
-            game_id: RAWG game ID
-
-        Returns:
-            dict: Detailed game information
-        """
+        """Get detailed information about a game from RAWG."""
         try:
             url = f"{RAWG_BASE_URL}/games/{game_id}"
             params = {'key': self.api_key}
@@ -91,15 +74,7 @@ class RAWGSyncer:
             return None
 
     def get_game_screenshots(self, game_id: int) -> List[Dict]:
-        """
-        Get screenshots for a game from RAWG.
-
-        Args:
-            game_id: RAWG game ID
-
-        Returns:
-            list: List of screenshot data
-        """
+        """Get screenshots for a game from RAWG."""
         try:
             url = f"{RAWG_BASE_URL}/games/{game_id}/screenshots"
             params = {'key': self.api_key}
@@ -111,19 +86,11 @@ class RAWGSyncer:
             return data.get('results', [])
 
         except Exception as e:
-            self._log(f"Error getting screenshots for game ID {game_id}: {str(e)}")
+            self._log(f"Error getting screenshots: {str(e)}")
             return []
 
     def get_game_achievements(self, game_id: int) -> List[Dict]:
-        """
-        Get achievements for a game from RAWG.
-
-        Args:
-            game_id: RAWG game ID
-
-        Returns:
-            list: List of achievement data
-        """
+        """Get achievements for a game from RAWG."""
         try:
             url = f"{RAWG_BASE_URL}/games/{game_id}/achievements"
             params = {'key': self.api_key}
@@ -135,19 +102,11 @@ class RAWGSyncer:
             return data.get('results', [])
 
         except Exception as e:
-            # Achievements might not be available for all games
+            self._log(f"Error getting achievements: {str(e)}")
             return []
 
     def get_game_trailers(self, game_id: int) -> List[Dict]:
-        """
-        Get trailers/movies for a game from RAWG.
-
-        Args:
-            game_id: RAWG game ID
-
-        Returns:
-            list: List of trailer data
-        """
+        """Get trailers for a game from RAWG."""
         try:
             url = f"{RAWG_BASE_URL}/games/{game_id}/movies"
             params = {'key': self.api_key}
@@ -159,19 +118,11 @@ class RAWGSyncer:
             return data.get('results', [])
 
         except Exception as e:
-            self._log(f"Error getting trailers for game ID {game_id}: {str(e)}")
+            self._log(f"Error getting trailers: {str(e)}")
             return []
 
     def get_game_stores(self, game_id: int) -> List[Dict]:
-        """
-        Get store links for a game from RAWG.
-
-        Args:
-            game_id: RAWG game ID
-
-        Returns:
-            list: List of store data
-        """
+        """Get store links for a game from RAWG."""
         try:
             url = f"{RAWG_BASE_URL}/games/{game_id}/stores"
             params = {'key': self.api_key}
@@ -183,390 +134,278 @@ class RAWGSyncer:
             return data.get('results', [])
 
         except Exception as e:
-            self._log(f"Error getting stores for game ID {game_id}: {str(e)}")
+            self._log(f"Error getting stores: {str(e)}")
             return []
 
-    def extract_metadata(self, game_data: Dict, screenshots_data: List = None,
-                         achievements_data: List = None, trailers_data: List = None,
-                         stores_data: List = None) -> Dict:
+    def extract_all_metadata(self, game_details: Dict, screenshots: List, achievements: List,
+                            trailers: List, stores: List) -> Dict:
         """
-        Extract and format ALL available metadata from RAWG game data.
-
-        Args:
-            game_data: Raw game data from RAWG API (from /games/{id})
-            screenshots_data: Screenshots from /games/{id}/screenshots
-            achievements_data: Achievements from /games/{id}/achievements
-            trailers_data: Trailers from /games/{id}/movies
-            stores_data: Store links from /games/{id}/stores
-
-        Returns:
-            dict: Formatted metadata for database storage
+        Extract ALL available metadata from RAWG API responses.
+        Returns dictionary with rawg__ prefixed keys.
         """
         metadata = {}
 
-        # ===== BASIC INFORMATION =====
-        metadata['rawg_id'] = game_data.get('id')
-        metadata['rawg_slug'] = game_data.get('slug')
-        metadata['name_original'] = game_data.get('name_original')
-        metadata['description'] = game_data.get('description_raw', '')
+        # Basic Info
+        metadata['rawg__id'] = game_details.get('id')
+        metadata['rawg__slug'] = game_details.get('slug')
+        metadata['rawg__name'] = game_details.get('name')
+        metadata['rawg__name_original'] = game_details.get('name_original')
+        metadata['rawg__description'] = game_details.get('description')
+        metadata['rawg__description_raw'] = game_details.get('description_raw')
 
-        # ===== DATES =====
-        metadata['release_date'] = game_data.get('released')
-        metadata['tba'] = game_data.get('tba', False)
-        metadata['updated_at_rawg'] = game_data.get('updated')
+        # Dates
+        metadata['rawg__released'] = game_details.get('released')
+        metadata['rawg__tba'] = game_details.get('tba')
+        metadata['rawg__updated'] = game_details.get('updated')
 
-        # ===== RATINGS =====
-        metadata['rating'] = game_data.get('rating')
-        metadata['rating_top'] = game_data.get('rating_top')
-        metadata['ratings_count'] = game_data.get('ratings_count')
-        metadata['reviews_count'] = game_data.get('reviews_text_count')
-        metadata['metacritic_score'] = game_data.get('metacritic')
-        metadata['metacritic_url'] = game_data.get('metacritic_url')
+        # Ratings & Reviews
+        metadata['rawg__rating'] = game_details.get('rating')
+        metadata['rawg__rating_top'] = game_details.get('rating_top')
+        metadata['rawg__ratings'] = game_details.get('ratings')  # Full ratings breakdown
+        metadata['rawg__ratings_count'] = game_details.get('ratings_count')
+        metadata['rawg__reviews_count'] = game_details.get('reviews_count')
+        metadata['rawg__reviews_text_count'] = game_details.get('reviews_text_count')
+        metadata['rawg__metacritic'] = game_details.get('metacritic')
+        metadata['rawg__metacritic_url'] = game_details.get('metacritic_url')
+        metadata['rawg__metacritic_platforms'] = game_details.get('metacritic_platforms')
 
-        # ===== IMAGES =====
-        metadata['background_image'] = game_data.get('background_image')
-        metadata['background_image_additional'] = game_data.get('background_image_additional')
-        metadata['cover_image'] = game_data.get('background_image')  # RAWG doesn't have separate cover
+        # Extract player counts from tags
+        # RAWG stores multiplayer info in tags
+        tags = game_details.get('tags', [])
+        local_min, local_max, online_min, online_max = self._extract_player_counts(tags)
+        metadata['rawg__local_players_min'] = local_min
+        metadata['rawg__local_players_max'] = local_max
+        metadata['rawg__online_players_min'] = online_min
+        metadata['rawg__online_players_max'] = online_max
 
-        # ===== LINKS =====
-        metadata['website'] = game_data.get('website')
+        # Statistics
+        metadata['rawg__playtime'] = game_details.get('playtime')
+        metadata['rawg__added'] = game_details.get('added')
+        metadata['rawg__added_by_status'] = game_details.get('added_by_status')
+        metadata['rawg__suggestions_count'] = game_details.get('suggestions_count')
 
-        # ===== COUNTS =====
-        metadata['playtime'] = game_data.get('playtime')  # Average playtime in hours
-        metadata['achievements_count'] = game_data.get('achievements_count', 0)
-        metadata['screenshots_count'] = game_data.get('screenshots_count', 0)
-        metadata['movies_count'] = game_data.get('movies_count', 0)
-        metadata['creators_count'] = game_data.get('creators_count', 0)
-        metadata['added_count'] = game_data.get('added', 0)
-        metadata['suggestions_count'] = game_data.get('suggestions_count', 0)
+        # Content Counts
+        metadata['rawg__achievements_count'] = game_details.get('achievements_count')
+        metadata['rawg__screenshots_count'] = game_details.get('screenshots_count')
+        metadata['rawg__movies_count'] = game_details.get('movies_count')
+        metadata['rawg__creators_count'] = game_details.get('creators_count')
+        metadata['rawg__additions_count'] = game_details.get('additions_count')
+        metadata['rawg__game_series_count'] = game_details.get('game_series_count')
+        metadata['rawg__parents_count'] = game_details.get('parents_count')
 
-        # ===== REDDIT =====
-        metadata['reddit_url'] = game_data.get('reddit_url')
-        metadata['reddit_name'] = game_data.get('reddit_name')
-        metadata['reddit_description'] = game_data.get('reddit_description')
-        metadata['reddit_logo'] = game_data.get('reddit_logo')
-        metadata['reddit_count'] = game_data.get('reddit_count')
+        # Media & Images
+        metadata['rawg__background_image'] = game_details.get('background_image')
+        metadata['rawg__background_image_additional'] = game_details.get('background_image_additional')
+        metadata['rawg__screenshots'] = screenshots  # Full screenshot data
+        metadata['rawg__trailers'] = trailers  # Full trailer data
 
-        # ===== ALTERNATIVE NAMES =====
-        metadata['alternative_names'] = game_data.get('alternative_names', [])
+        # Classifications
+        metadata['rawg__genres'] = [{'id': g.get('id'), 'name': g.get('name'), 'slug': g.get('slug')}
+                                    for g in game_details.get('genres', [])]
+        metadata['rawg__tags'] = [{'id': t.get('id'), 'name': t.get('name'), 'slug': t.get('slug')}
+                                  for t in game_details.get('tags', [])]
+        metadata['rawg__platforms'] = [{'platform': p.get('platform', {}).get('name')}
+                                       for p in game_details.get('platforms', [])]
+        metadata['rawg__parent_platforms'] = [{'platform': p.get('platform', {}).get('name')}
+                                              for p in game_details.get('parent_platforms', [])]
+        metadata['rawg__esrb_rating'] = game_details.get('esrb_rating')
 
-        # ===== GENRES =====
-        genres = []
-        for genre in game_data.get('genres', []):
-            genres.append(genre['name'])
-        metadata['genres'] = genres
+        # Achievements
+        metadata['rawg__achievements'] = achievements
 
-        # ===== PLATFORMS =====
-        platforms = []
-        parent_platforms = []
-        for platform_info in game_data.get('platforms', []):
-            platforms.append(platform_info['platform']['name'])
-        metadata['platforms'] = platforms
+        # Store Links
+        metadata['rawg__stores'] = [
+            {
+                'store_id': s.get('store', {}).get('id'),
+                'store_name': s.get('store', {}).get('name'),
+                'url': s.get('url')
+            }
+            for s in stores
+        ]
+        metadata['rawg__website'] = game_details.get('website')
 
-        for parent_platform in game_data.get('parent_platforms', []):
-            parent_platforms.append(parent_platform['platform']['name'])
-        metadata['parent_platforms'] = parent_platforms
+        # Development
+        metadata['rawg__developers'] = [{'id': d.get('id'), 'name': d.get('name'), 'slug': d.get('slug')}
+                                       for d in game_details.get('developers', [])]
+        metadata['rawg__publishers'] = [{'id': p.get('id'), 'name': p.get('name'), 'slug': p.get('slug')}
+                                        for p in game_details.get('publishers', [])]
+        metadata['rawg__creators'] = game_details.get('creators')
 
-        # ===== TAGS =====
-        tags = []
-        for tag in game_data.get('tags', []):
-            tags.append(tag['name'])
-        metadata['tags'] = tags
+        # Community
+        metadata['rawg__reddit_url'] = game_details.get('reddit_url')
+        metadata['rawg__reddit_name'] = game_details.get('reddit_name')
+        metadata['rawg__reddit_description'] = game_details.get('reddit_description')
+        metadata['rawg__reddit_logo'] = game_details.get('reddit_logo')
+        metadata['rawg__reddit_count'] = game_details.get('reddit_count')
+        metadata['rawg__twitch_count'] = game_details.get('twitch_count')
+        metadata['rawg__youtube_count'] = game_details.get('youtube_count')
 
-        # ===== ESRB RATING =====
-        esrb = game_data.get('esrb_rating')
-        if esrb:
-            metadata['esrb_rating'] = esrb['name']
-
-        # ===== DEVELOPERS & PUBLISHERS =====
-        developers = []
-        for dev in game_data.get('developers', []):
-            developers.append({
-                'id': dev.get('id'),
-                'name': dev.get('name'),
-                'slug': dev.get('slug')
-            })
-        metadata['developers'] = developers
-
-        publishers = []
-        for pub in game_data.get('publishers', []):
-            publishers.append({
-                'id': pub.get('id'),
-                'name': pub.get('name'),
-                'slug': pub.get('slug')
-            })
-        metadata['publishers'] = publishers
-
-        # ===== SCREENSHOTS =====
-        screenshots = []
-        if screenshots_data:
-            for screenshot in screenshots_data:
-                screenshots.append({
-                    'id': screenshot.get('id'),
-                    'image': screenshot.get('image'),
-                    'width': screenshot.get('width'),
-                    'height': screenshot.get('height')
-                })
-        else:
-            # Fallback to short_screenshots from main data
-            for screenshot in game_data.get('short_screenshots', []):
-                screenshots.append({'image': screenshot['image']})
-        metadata['screenshots'] = screenshots
-
-        # ===== ACHIEVEMENTS =====
-        achievements = []
-        if achievements_data:
-            for achievement in achievements_data[:20]:  # Limit to 20 achievements
-                achievements.append({
-                    'id': achievement.get('id'),
-                    'name': achievement.get('name'),
-                    'description': achievement.get('description'),
-                    'image': achievement.get('image'),
-                    'percent': achievement.get('percent')
-                })
-        metadata['achievements'] = achievements
-
-        # ===== TRAILERS =====
-        trailers = []
-        if trailers_data:
-            for trailer in trailers_data:
-                trailers.append({
-                    'id': trailer.get('id'),
-                    'name': trailer.get('name'),
-                    'preview': trailer.get('preview'),
-                    'data': trailer.get('data')
-                })
-        metadata['trailers'] = trailers
-
-        # ===== STORES =====
-        stores = []
-        if stores_data:
-            for store_info in stores_data:
-                stores.append({
-                    'id': store_info.get('id'),
-                    'store_id': store_info.get('store', {}).get('id'),
-                    'store_name': store_info.get('store', {}).get('name'),
-                    'url': store_info.get('url')
-                })
-        metadata['stores'] = stores
-
-        # ===== PLAYER COUNTS (CRITICAL REQUIREMENT) =====
-        metadata['local_players_min'] = None
-        metadata['local_players_max'] = None
-        metadata['online_players_min'] = None
-        metadata['online_players_max'] = None
-
-        # Check tags for multiplayer information
-        for tag in game_data.get('tags', []):
-            tag_name = tag['name'].lower()
-
-            # Local multiplayer detection
-            if 'local multiplayer' in tag_name or 'local co-op' in tag_name:
-                metadata['local_players_min'] = 1
-                metadata['local_players_max'] = 4  # Common default
-
-            if 'split screen' in tag_name or 'couch co-op' in tag_name:
-                metadata['local_players_min'] = 1
-                metadata['local_players_max'] = 4
-
-            if '2 players' in tag_name or 'two players' in tag_name:
-                metadata['local_players_max'] = 2
-            if '4 players' in tag_name or 'four players' in tag_name:
-                metadata['local_players_max'] = 4
-
-            # Online multiplayer detection
-            if 'multiplayer' in tag_name or 'online co-op' in tag_name:
-                metadata['online_players_min'] = 1
-                metadata['online_players_max'] = 100  # Generic online multiplayer
-
-            if 'mmo' in tag_name or 'massively multiplayer' in tag_name:
-                metadata['online_players_min'] = 1
-                metadata['online_players_max'] = 1000  # MMO games
-
-            # Specific player counts from tags
-            if 'pvp' in tag_name:
-                if not metadata['online_players_max']:
-                    metadata['online_players_min'] = 2
-                    metadata['online_players_max'] = 100
-
-            # Single player
-            if tag_name == 'singleplayer' or tag_name == 'single-player':
-                if metadata['local_players_min'] is None:
-                    metadata['local_players_min'] = 1
-                    metadata['local_players_max'] = 1
+        # Additional Data
+        metadata['rawg__alternative_names'] = game_details.get('alternative_names', [])
+        metadata['rawg__reactions'] = game_details.get('reactions')
 
         return metadata
 
-    def sync_game(self, game_db_id: int, game_title: str) -> bool:
+    def _extract_player_counts(self, tags: List[Dict]) -> tuple:
         """
-        Sync a single game with ALL available RAWG metadata.
-
-        Args:
-            game_db_id: Database ID of the game
-            game_title: Title of the game to search
+        Extract player count information from RAWG tags.
 
         Returns:
-            bool: True if sync was successful
+            tuple: (local_min, local_max, online_min, online_max)
         """
-        # Search for the game
+        local_min, local_max = None, None
+        online_min, online_max = None, None
+
+        tag_names = [tag.get('name', '').lower() for tag in tags]
+
+        # Check for multiplayer tags
+        if 'singleplayer' in tag_names or 'single-player' in tag_names:
+            local_min, local_max = 1, 1
+
+        if 'local co-op' in tag_names or 'local multiplayer' in tag_names or 'split screen' in tag_names or 'co-op' in tag_names:
+            if local_min is None:
+                local_min = 1
+            local_max = 4  # Default assumption
+
+        if 'multiplayer' in tag_names or 'online co-op' in tag_names or 'mmo' in tag_names or 'massively multiplayer' in tag_names:
+            online_min = 1
+            if 'mmo' in tag_names or 'massively multiplayer' in tag_names:
+                online_max = 1000  # MMO
+            else:
+                online_max = 64  # Standard multiplayer
+
+        return local_min, local_max, online_min, online_max
+
+    def sync_game(self, game_id: int, game_title: str) -> bool:
+        """
+        Sync a single game with RAWG API - fetches ALL available data.
+
+        Args:
+            game_id: Database game ID
+            game_title: Game title to search for
+
+        Returns:
+            bool: True if successful
+        """
+        self._log(f"\n--- Syncing: {game_title} ---")
+
+        # Step 1: Search for the game
         search_result = self.search_game(game_title)
-
         if not search_result:
-            self._log(f"  ✗ Could not find on RAWG")
+            self._log(f"[SKIP] Could not find '{game_title}' on RAWG")
             return False
 
-        # Get detailed information
-        game_id = search_result['id']
-        self._log(f"  → Fetching game details...")
-        game_details = self.get_game_details(game_id)
+        rawg_id = search_result.get('id')
+        self._log(f"[FOUND] RAWG ID: {rawg_id}")
 
+        # Step 2: Get game details
+        self._log("[API] Fetching game details...")
+        game_details = self.get_game_details(rawg_id)
         if not game_details:
-            self._log(f"  ✗ Could not fetch details")
             return False
 
-        # Fetch additional data
-        self._log(f"  → Fetching screenshots...")
-        screenshots = self.get_game_screenshots(game_id)
-        time.sleep(0.3)  # Small delay to respect rate limits
+        time.sleep(REQUEST_DELAY)
 
-        self._log(f"  → Fetching achievements...")
-        achievements = self.get_game_achievements(game_id)
-        time.sleep(0.3)
+        # Step 3: Get screenshots
+        self._log("[API] Fetching screenshots...")
+        screenshots = self.get_game_screenshots(rawg_id)
+        self._log(f"  → {len(screenshots)} screenshots found")
+        time.sleep(REQUEST_DELAY)
 
-        self._log(f"  → Fetching trailers...")
-        trailers = self.get_game_trailers(game_id)
-        time.sleep(0.3)
+        # Step 4: Get achievements
+        self._log("[API] Fetching achievements...")
+        achievements = self.get_game_achievements(rawg_id)
+        self._log(f"  → {len(achievements)} achievements found")
+        time.sleep(REQUEST_DELAY)
 
-        self._log(f"  → Fetching store links...")
-        stores = self.get_game_stores(game_id)
-        time.sleep(0.3)
+        # Step 5: Get trailers
+        self._log("[API] Fetching trailers...")
+        trailers = self.get_game_trailers(rawg_id)
+        self._log(f"  → {len(trailers)} trailers found")
+        time.sleep(REQUEST_DELAY)
 
-        # Extract and format metadata
-        self._log(f"  → Processing metadata...")
-        metadata = self.extract_metadata(
-            game_details,
-            screenshots_data=screenshots,
-            achievements_data=achievements,
-            trailers_data=trailers,
-            stores_data=stores
-        )
+        # Step 6: Get store links
+        self._log("[API] Fetching store links...")
+        stores = self.get_game_stores(rawg_id)
+        self._log(f"  → {len(stores)} stores found")
 
-        # Update database
-        update_game_metadata(game_db_id, metadata)
+        # Step 7: Extract all metadata
+        self._log("[PROCESS] Extracting metadata...")
+        metadata = self.extract_all_metadata(game_details, screenshots, achievements, trailers, stores)
 
-        # Summary
-        self._log(f"  ✓ Synced: {len(screenshots)} screenshots, {len(achievements)} achievements, "
-                 f"{len(trailers)} trailers, {len(stores)} stores")
+        # Step 8: Update database
+        self._log("[DB] Saving to database...")
+        success = update_game_with_rawg_data(game_id, metadata)
 
-        return True
-
-    def sync_all_games(self, force_resync: bool = False):
-        """
-        Sync all games with ALL available RAWG metadata.
-
-        Args:
-            force_resync: If True, re-sync all games regardless of sync status
-
-        Returns:
-            dict: Summary of the sync operation
-        """
-        if not self.api_key or self.api_key == "":
-            self._log("=" * 60)
-            self._log("ERROR: RAWG API key not configured!")
-            self._log("=" * 60)
-            self._log("Please set your RAWG API key in the .env file")
-            self._log("Get a free API key at: https://rawg.io/apidocs")
-            self._log("")
-            return {
-                'success': False,
-                'error': 'API key not configured',
-                'message': 'Please set your RAWG API key in the .env file'
-            }
-
-        # Get games to sync
-        if force_resync:
-            games = get_all_games()
-            self._log("=" * 60)
-            self._log(f"FORCE RE-SYNCING ALL {len(games)} GAMES")
-            self._log("=" * 60)
+        if success:
+            self._log(f"[SUCCESS] '{game_title}' synced successfully!\n")
         else:
-            games = get_games_without_rawg_sync()
-            self._log("=" * 60)
-            self._log(f"SYNCING {len(games)} NEW GAMES WITH RAWG")
-            self._log("=" * 60)
+            self._log(f"[ERROR] Failed to save '{game_title}' to database\n")
 
-        if not games:
-            self._log("No games to sync!")
-            self._log("")
-            return {
-                'success': True,
-                'synced': 0,
-                'failed': 0,
-                'message': 'No games to sync'
-            }
+        return success
 
-        self._log("")
-        self._log("Fetching comprehensive metadata for each game:")
-        self._log("  • Game details (description, ratings, etc.)")
-        self._log("  • Screenshots (high quality)")
-        self._log("  • Achievements")
-        self._log("  • Trailers & gameplay videos")
-        self._log("  • Store links")
-        self._log("  • Developers & publishers")
-        self._log("  • Player counts (local/online)")
-        self._log("")
 
-        synced = 0
-        failed = 0
+def sync_with_rawg(callback=None, force_resync=False) -> Dict:
+    """
+    Sync all unsynced games with RAWG API.
 
-        for i, game in enumerate(games, 1):
-            self._log(f"[{i}/{len(games)}] {game['title']}")
+    Args:
+        callback: Optional callback function for status updates
+        force_resync: If True, re-sync all games
 
-            if self.sync_game(game['id'], game['title']):
+    Returns:
+        dict: Summary of sync operation
+    """
+    syncer = RAWGSyncer(callback=callback)
+
+    if not syncer.api_key:
+        return {
+            'success': False,
+            'error': 'RAWG API key not configured. Add it to your .env file.'
+        }
+
+    # Get games that need syncing
+    if force_resync:
+        games = get_all_games()
+        syncer._log(f"Force re-syncing ALL {len(games)} games...")
+    else:
+        games = get_games_without_rawg_sync()
+        syncer._log(f"Found {len(games)} games to sync with RAWG")
+
+    if not games:
+        syncer._log("No games to sync!")
+        return {
+            'success': True,
+            'synced_count': 0,
+            'failed_count': 0,
+            'message': 'No games to sync'
+        }
+
+    synced = 0
+    failed = 0
+
+    for game in games:
+        try:
+            success = syncer.sync_game(game['id'], game['title'])
+            if success:
                 synced += 1
             else:
                 failed += 1
 
-            self._log("")  # Blank line between games
+            # Rate limiting
+            time.sleep(REQUEST_DELAY)
 
-            # Rate limiting delay
-            if i < len(games):
-                time.sleep(REQUEST_DELAY)
+        except Exception as e:
+            syncer._log(f"[ERROR] Exception syncing '{game['title']}': {str(e)}")
+            failed += 1
 
-        self._log("=" * 60)
-        self._log("SYNC COMPLETE!")
-        self._log("=" * 60)
-        self._log(f"Successfully synced: {synced}")
-        self._log(f"Failed: {failed}")
-        self._log(f"Total processed: {len(games)}")
-        self._log("")
+    syncer._log("\n" + "="*60)
+    syncer._log(f"SYNC COMPLETE: {synced} synced, {failed} failed")
+    syncer._log("="*60)
 
-        message = f"Synced {synced} games with comprehensive metadata! Failed: {failed}"
-
-        return {
-            'success': True,
-            'synced': synced,
-            'failed': failed,
-            'total': len(games),
-            'message': message
-        }
-
-def sync_with_rawg(api_key: str = None, callback=None, force_resync: bool = False):
-    """
-    Convenience function to sync games with RAWG.
-
-    Args:
-        api_key: Optional RAWG API key
-        callback: Optional function to call with status updates
-        force_resync: If True, re-sync all games
-
-    Returns:
-        dict: Result of the sync operation
-    """
-    syncer = RAWGSyncer(api_key=api_key, callback=callback)
-    return syncer.sync_all_games(force_resync=force_resync)
-
-# For testing
-if __name__ == "__main__":
-    result = sync_with_rawg()
-    print(result)
+    return {
+        'success': True,
+        'synced_count': synced,
+        'failed_count': failed,
+        'total_games': len(games)
+    }

@@ -18,6 +18,7 @@ function setupEventListeners() {
     document.getElementById('parseEpicBtn').addEventListener('click', parseEpicGames);
     document.getElementById('continueParsingBtn').addEventListener('click', continueParsing);
     document.getElementById('syncBtn').addEventListener('click', startSyncing);
+    document.getElementById('syncIgdbBtn').addEventListener('click', startIgdbSync);
     document.getElementById('refreshBtn').addEventListener('click', () => {
         loadGames();
         loadStats();
@@ -56,7 +57,8 @@ async function loadStats() {
 
         if (data.success) {
             document.getElementById('totalGames').textContent = data.total_games;
-            document.getElementById('syncedGames').textContent = data.synced_games;
+            document.getElementById('syncedGamesRawg').textContent = data.synced_games_rawg || 0;
+            document.getElementById('syncedGamesIgdb').textContent = data.synced_games_igdb || 0;
             document.getElementById('localMpGames').textContent = data.local_multiplayer_games;
             document.getElementById('onlineMpGames').textContent = data.online_multiplayer_games;
         }
@@ -69,8 +71,14 @@ async function loadStats() {
 function extractGenres() {
     currentGenres.clear();
     allGames.forEach(game => {
-        if (game.genres) {
-            game.genres.forEach(genre => currentGenres.add(genre));
+        if (game.rawg__genres) {
+            const genres = game.rawg__genres;
+            if (Array.isArray(genres)) {
+                genres.forEach(genre => {
+                    const genreName = typeof genre === 'object' ? genre.name : genre;
+                    if (genreName) currentGenres.add(genreName);
+                });
+            }
         }
     });
 
@@ -98,22 +106,26 @@ function filterGames() {
         }
 
         // Genre filter
-        if (genreFilter && (!game.genres || !game.genres.includes(genreFilter))) {
-            return false;
+        if (genreFilter) {
+            const genres = game.rawg__genres || [];
+            const genreNames = genres.map(g => typeof g === 'object' ? g.name : g);
+            if (!genreNames.includes(genreFilter)) {
+                return false;
+            }
         }
 
         // Player filter
         if (playerFilter === 'local') {
-            if (!game.local_players_max || game.local_players_max <= 1) {
+            if (!game.rawg__local_players_max || game.rawg__local_players_max <= 1) {
                 return false;
             }
         } else if (playerFilter === 'online') {
-            if (!game.online_players_max || game.online_players_max <= 1) {
+            if (!game.rawg__online_players_max || game.rawg__online_players_max <= 1) {
                 return false;
             }
         } else if (playerFilter === 'singleplayer') {
-            if ((game.local_players_max && game.local_players_max > 1) ||
-                (game.online_players_max && game.online_players_max > 1)) {
+            if ((game.rawg__local_players_max && game.rawg__local_players_max > 1) ||
+                (game.rawg__online_players_max && game.rawg__online_players_max > 1)) {
                 return false;
             }
         }
@@ -126,9 +138,9 @@ function filterGames() {
         if (sortBy === 'title') {
             return a.title.localeCompare(b.title);
         } else if (sortBy === 'rating') {
-            return (b.rating || 0) - (a.rating || 0);
+            return (b.rawg__rating || 0) - (a.rawg__rating || 0);
         } else if (sortBy === 'release_date') {
-            return (b.release_date || '').localeCompare(a.release_date || '');
+            return (b.rawg__released || '').localeCompare(a.rawg__released || '');
         }
         return 0;
     });
@@ -150,19 +162,22 @@ function displayGames() {
 
 // Create game card HTML
 function createGameCard(game) {
-    const hasSyncData = game.synced_with_rawg;
-    const imageUrl = game.background_image || game.cover_image || '';
-    const rating = game.rating ? game.rating.toFixed(1) : null;
-    const releaseYear = game.release_date ? new Date(game.release_date).getFullYear() : null;
+    const hasSyncData = game.rawg__synced;
+    const imageUrl = game.rawg__background_image || '';
+    const rating = game.rawg__rating ? game.rawg__rating.toFixed(1) : null;
+    const releaseYear = game.rawg__released ? new Date(game.rawg__released).getFullYear() : null;
 
-    const localPlayers = game.local_players_max > 1 ?
-        `<span class="meta-badge badge-local">Local ${game.local_players_min}-${game.local_players_max}P</span>` : '';
+    const localPlayers = game.rawg__local_players_max > 1 ?
+        `<span class="meta-badge badge-local">Local ${game.rawg__local_players_min || 1}-${game.rawg__local_players_max}P</span>` : '';
 
-    const onlinePlayers = game.online_players_max > 1 ?
-        `<span class="meta-badge badge-online">Online ${game.online_players_min}-${game.online_players_max}P</span>` : '';
+    const onlinePlayers = game.rawg__online_players_max > 1 ?
+        `<span class="meta-badge badge-online">Online ${game.rawg__online_players_min || 1}-${game.rawg__online_players_max}P</span>` : '';
 
-    const genres = game.genres && game.genres.length > 0 ?
-        game.genres.slice(0, 3).map(g => `<span class="genre-tag">${g}</span>`).join('') : '';
+    const genres = game.rawg__genres && game.rawg__genres.length > 0 ?
+        game.rawg__genres.slice(0, 3).map(g => {
+            const genreName = typeof g === 'object' ? g.name : g;
+            return `<span class="genre-tag">${genreName}</span>`;
+        }).join('') : '';
 
     return `
         <div class="game-card ${!hasSyncData ? 'no-sync' : ''}" onclick="showGameDetail(${game.id})">
@@ -189,31 +204,142 @@ function showGameDetail(gameId) {
     const game = allGames.find(g => g.id === gameId);
     if (!game) return;
 
+    console.log('Showing game detail for:', game.title);
+    console.log('Game data:', game);
+    console.log('IGDB genres:', game.igdb__genres);
+    console.log('IGDB developers:', game.igdb__developers);
+    console.log('IGDB publishers:', game.igdb__publishers);
+
     // Print game info to terminal
     printGameInfoToTerminal(gameId);
 
     const modal = document.getElementById('gameModal');
     const detailDiv = document.getElementById('gameDetail');
 
-    const imageUrl = game.background_image || game.cover_image || '';
-    const rating = game.rating ? game.rating.toFixed(1) : 'N/A';
-    const metacritic = game.metacritic_score || 'N/A';
-    const releaseDate = game.release_date || 'Unknown';
-    const platforms = game.platforms ? game.platforms.join(', ') : 'N/A';
-    const genres = game.genres ? game.genres.join(', ') : 'N/A';
-    const description = game.description || 'No description available.';
+    // Check if game has any metadata
+    const hasRAWGData = game.rawg__synced === 1;
+    const hasIGDBData = game.igdb__synced === 1;
 
-    const localPlayersText = game.local_players_max ?
-        `${game.local_players_min || 1}-${game.local_players_max} Players` : 'N/A';
-    const onlinePlayersText = game.online_players_max ?
-        `${game.online_players_min || 1}-${game.online_players_max} Players` : 'N/A';
+    // If no metadata at all, show sync buttons
+    if (!hasRAWGData && !hasIGDBData) {
+        detailDiv.innerHTML = `
+            <div class="game-detail-header">
+                <h2>${game.title}</h2>
+            </div>
+            <div class="game-detail-content">
+                <div class="no-metadata-message">
+                    <h3>No metadata available for this game</h3>
+                    <p>Sync with RAWG or IGDB to get detailed information about this game.</p>
+                    <div class="sync-buttons" style="display: flex; gap: 1rem; margin-top: 2rem; justify-content: center;">
+                        <button class="action-btn" onclick="syncSingleGameRAWG(${game.id})" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <span class="btn-icon">🔄</span> Sync with RAWG
+                        </button>
+                        <button class="action-btn" onclick="syncSingleGameIGDB(${game.id})" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <span class="btn-icon">🎮</span> Sync with IGDB
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        return;
+    }
+
+    // Decide which data source to display (prefer RAWG for now as it has more frontend support)
+    // TODO: Create proper IGDB display or merged view
+    if (hasIGDBData && !hasRAWGData) {
+        // Show IGDB data (simplified view for now)
+        const cover = game.igdb__cover || '';
+        const summary = game.igdb__summary || 'No description available.';
+        const rating = game.igdb__rating ? (game.igdb__rating / 20).toFixed(1) : 'N/A'; // IGDB rating is 0-100, convert to 0-5
+
+        // Safely handle arrays that might be null/undefined or strings
+        const getGenres = () => {
+            if (!game.igdb__genres) return '';
+            const genres = Array.isArray(game.igdb__genres) ? game.igdb__genres : [];
+            return genres.length > 0 ? `
+                <div class="game-detail-section">
+                    <h3>Genres</h3>
+                    <p>${genres.join(', ')}</p>
+                </div>
+            ` : '';
+        };
+
+        const getDevelopers = () => {
+            if (!game.igdb__developers) return '';
+            const devs = Array.isArray(game.igdb__developers) ? game.igdb__developers : [];
+            return devs.length > 0 ? `
+                <div class="game-detail-section">
+                    <h3>Developers</h3>
+                    <p>${devs.join(', ')}</p>
+                </div>
+            ` : '';
+        };
+
+        const getPublishers = () => {
+            if (!game.igdb__publishers) return '';
+            const pubs = Array.isArray(game.igdb__publishers) ? game.igdb__publishers : [];
+            return pubs.length > 0 ? `
+                <div class="game-detail-section">
+                    <h3>Publishers</h3>
+                    <p>${pubs.join(', ')}</p>
+                </div>
+            ` : '';
+        };
+
+        detailDiv.innerHTML = `
+            <div class="game-detail-header" style="${cover ? `background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('${cover}')` : ''}">
+                <h2>${game.igdb__name || game.title}</h2>
+            </div>
+            <div class="game-detail-content">
+                <div class="game-detail-section">
+                    <h3>About</h3>
+                    <p>${summary}</p>
+                    ${game.igdb__storyline ? `<p style="margin-top: 1rem;"><strong>Storyline:</strong> ${game.igdb__storyline}</p>` : ''}
+                </div>
+
+                <div class="game-detail-section">
+                    <h3>Rating</h3>
+                    <p>IGDB Rating: ${rating} / 5.0</p>
+                    ${game.igdb__total_rating ? `<p>Aggregated Rating: ${(game.igdb__total_rating / 20).toFixed(1)} / 5.0</p>` : ''}
+                </div>
+
+                ${getGenres()}
+                ${getDevelopers()}
+                ${getPublishers()}
+
+                <div class="game-detail-section">
+                    <p style="text-align: center; margin-top: 2rem;">
+                        <button class="action-btn" onclick="syncSingleGameRAWG(${game.id})" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <span class="btn-icon">🔄</span> Also Sync with RAWG
+                        </button>
+                    </p>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        return;
+    }
+
+    const imageUrl = game.rawg__background_image || '';
+    const rating = game.rawg__rating ? game.rawg__rating.toFixed(1) : 'N/A';
+    const metacritic = game.rawg__metacritic || 'N/A';
+    const releaseDate = game.rawg__released || 'Unknown';
+
+    const platforms = game.rawg__platforms && game.rawg__platforms.length > 0 ?
+        game.rawg__platforms.map(p => typeof p === 'object' ? p.platform : p).join(', ') : 'N/A';
+
+    const genres = game.rawg__genres && game.rawg__genres.length > 0 ?
+        game.rawg__genres.map(g => typeof g === 'object' ? g.name : g).join(', ') : 'N/A';
+
+    const description = game.rawg__description || 'No description available.';
 
     // Screenshots section
-    const screenshots = game.screenshots && game.screenshots.length > 0 ?
+    const screenshots = game.rawg__screenshots && game.rawg__screenshots.length > 0 ?
         `<div class="game-detail-section">
-            <h3>📷 Screenshots (${game.screenshots.length})</h3>
+            <h3>📷 Screenshots (${game.rawg__screenshots.length})</h3>
             <div class="screenshots-grid">
-                ${game.screenshots.map(screenshot => {
+                ${game.rawg__screenshots.map(screenshot => {
                     const imageUrl = typeof screenshot === 'object' ? screenshot.image : screenshot;
                     return `<img src="${imageUrl}" alt="Screenshot" class="screenshot" onclick="window.open('${imageUrl}', '_blank')">`;
                 }).join('')}
@@ -221,21 +347,21 @@ function showGameDetail(gameId) {
         </div>` : '';
 
     // Achievements section
-    const achievements = game.achievements && game.achievements.length > 0 ?
+    const achievements = game.rawg__achievements && game.rawg__achievements.length > 0 ?
         `<div class="game-detail-section">
-            <h3>🏆 Achievements (${game.achievements.length})</h3>
+            <h3>🏆 Achievements (${game.rawg__achievements.length})</h3>
             <div class="achievements-grid" id="achievements-${game.id}">
-                ${game.achievements.slice(0, 5).map(ach => `
+                ${game.rawg__achievements.slice(0, 5).map(ach => `
                     <div class="achievement-card">
                         <div class="achievement-name">${ach.name || 'Unknown'}</div>
                         <div class="achievement-percent">${ach.percent || 'N/A'}%</div>
                         ${ach.description ? `<div class="achievement-desc">${ach.description}</div>` : ''}
                     </div>
                 `).join('')}
-                ${game.achievements.length > 5 ? `
+                ${game.rawg__achievements.length > 5 ? `
                     <div class="achievement-more">
                         <button class="expand-btn" onclick="expandAchievements(${game.id})">
-                            +${game.achievements.length - 5} more achievements
+                            +${game.rawg__achievements.length - 5} more achievements
                         </button>
                     </div>
                 ` : ''}
@@ -243,11 +369,11 @@ function showGameDetail(gameId) {
         </div>` : '';
 
     // Store links section
-    const storeLinks = game.stores && game.stores.length > 0 ?
+    const storeLinks = game.rawg__stores && game.rawg__stores.length > 0 ?
         `<div class="game-detail-section">
             <h3>🛒 Where to Buy</h3>
             <div class="store-links">
-                ${game.stores.map(store => `
+                ${game.rawg__stores.map(store => `
                     <a href="${store.url}" target="_blank" class="store-link">
                         <span class="store-name">${store.store_name || 'Game Store'}</span>
                         <span class="store-icon">🔗</span>
@@ -257,32 +383,35 @@ function showGameDetail(gameId) {
         </div>` : '';
 
     // Tags section
-    const tags = game.tags && game.tags.length > 0 ?
+    const tags = game.rawg__tags && game.rawg__tags.length > 0 ?
         `<div class="game-detail-section">
             <h3>🏷️ Tags</h3>
             <div class="tags-container" id="tags-${game.id}">
-                ${game.tags.slice(0, 15).map(tag => `<span class="tag-pill">${tag}</span>`).join('')}
-                ${game.tags.length > 15 ? `
+                ${game.rawg__tags.slice(0, 15).map(tag => {
+                    const tagName = typeof tag === 'object' ? tag.name : tag;
+                    return `<span class="tag-pill">${tagName}</span>`;
+                }).join('')}
+                ${game.rawg__tags.length > 15 ? `
                     <button class="tag-more expand-btn" onclick="expandTags(${game.id})">
-                        +${game.tags.length - 15} more
+                        +${game.rawg__tags.length - 15} more
                     </button>
                 ` : ''}
             </div>
         </div>` : '';
 
     // Developers & Publishers
-    const developers = game.developers && game.developers.length > 0 ?
-        game.developers.map(dev => dev.name || 'Unknown').join(', ') : 'Unknown';
-    
-    const publishers = game.publishers && game.publishers.length > 0 ?
-        game.publishers.map(pub => pub.name || 'Unknown').join(', ') : 'Unknown';
+    const developers = game.rawg__developers && game.rawg__developers.length > 0 ?
+        game.rawg__developers.map(dev => dev.name || 'Unknown').join(', ') : 'Unknown';
+
+    const publishers = game.rawg__publishers && game.rawg__publishers.length > 0 ?
+        game.rawg__publishers.map(pub => pub.name || 'Unknown').join(', ') : 'Unknown';
 
     // Trailers section
-    const trailers = game.trailers && game.trailers.length > 0 ?
+    const trailers = game.rawg__trailers && game.rawg__trailers.length > 0 ?
         `<div class="game-detail-section">
-            <h3>🎬 Trailers & Videos (${game.trailers.length})</h3>
+            <h3>🎬 Trailers & Videos (${game.rawg__trailers.length})</h3>
             <div class="trailers-grid">
-                ${game.trailers.map(trailer => `
+                ${game.rawg__trailers.map(trailer => `
                     <div class="trailer-card">
                         ${trailer.preview ? `<img src="${trailer.preview}" alt="${trailer.name}" class="trailer-preview">` : ''}
                         <div class="trailer-name">${trailer.name || 'Video'}</div>
@@ -300,17 +429,16 @@ function showGameDetail(gameId) {
                 <span class="meta-badge badge-date">📅 ${releaseDate}</span>
             </div>
 
-            <!-- IGDB Sync Section -->
-            <div style="margin: 20px 0; padding: 15px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border: 2px solid #4caf50;">
+            <!-- IGDB Sync Section (only show if not synced) -->
+            ${!hasIGDBData ? `
+            <div id="igdbSyncSection-${game.id}" style="margin: 20px 0; padding: 15px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; border: 2px solid #4caf50;">
                 <h3 style="margin-top: 0; color: #4caf50;">🎮 Sync with IGDB</h3>
                 <p style="margin: 10px 0; font-size: 0.9em; color: #ccc;">Fetch detailed game information from the IGDB database</p>
-                <button onclick="syncWithIGDB(${game.id}, '${game.title.replace(/'/g, "\\'")}', event)" class="btn" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%); padding: 12px 24px; width: 100%;">
+                <button id="igdbSyncBtn-${game.id}" onclick="syncGameWithIGDB(${game.id})" class="btn" style="background: linear-gradient(135deg, #4caf50 0%, #8bc34a 100%); padding: 12px 24px; width: 100%;">
                     <span class="btn-icon">🔄</span> Sync with IGDB
                 </button>
-                <div id="igdbResponse-${game.id}" style="margin-top: 15px; display: none;">
-                    <!-- IGDB response will be displayed here -->
-                </div>
             </div>
+            ` : ''}
 
         ${imageUrl ? `<img src="${imageUrl}" alt="${game.title}" class="game-detail-image">` : ''}
 
@@ -327,20 +455,6 @@ function showGameDetail(gameId) {
             </div>
 
             <div class="game-detail-sidebar">
-                <div class="game-detail-section">
-                    <h3>👥 Player Information</h3>
-                    <div class="player-info-compact">
-                        <div class="player-info-item">
-                            <span class="player-label">Local:</span>
-                            <span class="player-value">${localPlayersText}</span>
-                        </div>
-                        <div class="player-info-item">
-                            <span class="player-label">Online:</span>
-                            <span class="player-value">${onlinePlayersText}</span>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="game-detail-section">
                     <h3>📊 Game Stats</h3>
                     <div class="game-stats">
@@ -494,6 +608,34 @@ async function startSyncing() {
     }
 }
 
+async function startIgdbSync() {
+    const btn = document.getElementById('syncIgdbBtn');
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+
+    try {
+        const response = await fetch('/api/sync-igdb', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showPanel('igdbPanel');
+            startPolling('igdb');
+        } else {
+            alert(data.message);
+            btn.disabled = false;
+            btn.innerHTML = '<span class="btn-icon">🎮</span> Sync with IGDB';
+        }
+    } catch (error) {
+        console.error('Error starting IGDB sync:', error);
+        alert('Failed to start IGDB sync');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">🎮</span> Sync with IGDB';
+    }
+}
+
 function showPanel(panelId) {
     document.getElementById(panelId).style.display = 'block';
 }
@@ -519,9 +661,10 @@ function startPolling(taskType) {
 
     if (taskType === 'scraping') {
         scrapingPollInterval = interval;
-    } else {
+    } else if (taskType === 'syncing') {
         syncingPollInterval = interval;
     }
+    // IGDB doesn't need an interval variable stored
 }
 
 function updateLogs(taskType, logs) {
@@ -544,10 +687,14 @@ function taskComplete(taskType, result) {
         const continueBtn = document.getElementById('continueParsingBtn');
         continueBtn.disabled = false;
         continueBtn.innerHTML = '<span class="btn-icon">▶️</span> Continue';
-    } else {
+    } else if (taskType === 'syncing') {
         const btn = document.getElementById('syncBtn');
         btn.disabled = false;
         btn.innerHTML = '<span class="btn-icon">🔄</span> Sync with RAWG';
+    } else if (taskType === 'igdb') {
+        const btn = document.getElementById('syncIgdbBtn');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">🎮</span> Sync with IGDB';
     }
 
     if (result && result.success) {
@@ -955,121 +1102,84 @@ async function printGameInfoToTerminal(gameId) {
 
 // ==================== IGDB SYNC FUNCTIONALITY ====================
 
-async function syncWithIGDB(gameId, gameTitle, event) {
-    // Prevent button from being clicked multiple times
-    if (event) {
-        event.target.disabled = true;
+async function syncGameWithIGDB(gameId) {
+    const btn = document.getElementById(`igdbSyncBtn-${gameId}`);
+    const syncSection = document.getElementById(`igdbSyncSection-${gameId}`);
+
+    if (!btn || !syncSection) {
+        console.error('IGDB sync button or section not found');
+        return;
     }
 
-    const responseDiv = document.getElementById(`igdbResponse-${gameId}`);
-    responseDiv.style.display = 'block';
-    responseDiv.innerHTML = '<p style="text-align: center; color: #4caf50;">⏳ Searching IGDB for "' + gameTitle + '"...</p>';
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-icon">⏳</span> Syncing with IGDB...';
 
     try {
-        const response = await fetch('/api/sync-igdb', {
+        const response = await fetch(`/api/sync-single-game/${gameId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                game_title: gameTitle
-            })
+            body: JSON.stringify({ source: 'igdb' })
         });
 
         const data = await response.json();
 
         if (data.success) {
-            // Format the response data nicely
-            const gameData = data.data;
+            // Show success message temporarily
+            btn.innerHTML = '<span class="btn-icon">✅</span> Successfully Synced!';
+            btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)';
 
-            let html = `
-                <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #4caf50;">
-                    <h3 style="color: #4caf50; margin-top: 0;">✓ IGDB Data Retrieved Successfully!</h3>
-                    <p style="color: #8bc34a; margin: 5px 0;">
-                        <strong>Matched Game:</strong> ${data.game_name} (IGDB ID: ${data.igdb_id})
-                    </p>
+            // Remove the entire sync section after 2 seconds
+            setTimeout(() => {
+                syncSection.style.transition = 'opacity 0.5s';
+                syncSection.style.opacity = '0';
+                setTimeout(() => {
+                    syncSection.remove();
+                }, 500);
+            }, 2000);
 
-                    <div style="max-height: 500px; overflow-y: auto; font-family: monospace; font-size: 0.85em;">
-            `;
+            // Refresh games list and reload modal
+            await loadGames();
+            await loadStats();
 
-            // Display all fields from the game data
-            for (const [key, value] of Object.entries(gameData)) {
-                let displayValue;
+            // Show success notification
+            alert(`Successfully synced with IGDB!\n\nCheck the terminal for detailed sync information.`);
 
-                if (value === null || value === undefined) {
-                    displayValue = '<em style="color: #666;">N/A</em>';
-                } else if (Array.isArray(value)) {
-                    displayValue = `<span style="color: #8bc34a;">[Array: ${value.length} items]</span>`;
-                    if (value.length > 0 && value.length <= 10) {
-                        displayValue += `<br><span style="margin-left: 20px; color: #ccc;">${JSON.stringify(value, null, 2)}</span>`;
-                    }
-                } else if (typeof value === 'object') {
-                    displayValue = `<span style="color: #8bc34a;">[Object]</span><br><span style="margin-left: 20px; color: #ccc;">${JSON.stringify(value, null, 2)}</span>`;
-                } else if (typeof value === 'boolean') {
-                    displayValue = `<span style="color: ${value ? '#4caf50' : '#f44336'};">${value}</span>`;
-                } else if (typeof value === 'number') {
-                    displayValue = `<span style="color: #ffc107;">${value}</span>`;
-                } else {
-                    displayValue = `<span style="color: #fff;">${value}</span>`;
-                }
-
-                html += `
-                    <div style="margin-bottom: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-                        <strong style="color: #4caf50;">${key}:</strong> ${displayValue}
-                    </div>
-                `;
-            }
-
-            html += `
-                    </div>
-
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
-                        <p style="font-size: 0.9em; color: #999; margin: 0;">
-                            📋 Complete game data from IGDB API displayed above.
-                        </p>
-                        <button onclick="closeIGDBResponse(${gameId})" class="btn" style="margin-top: 10px; background: #666;">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            responseDiv.innerHTML = html;
+            // Close and reopen modal to show updated data
+            setTimeout(() => {
+                closeModal();
+                setTimeout(() => {
+                    showGameDetail(gameId);
+                }, 300);
+            }, 2500);
         } else {
-            responseDiv.innerHTML = `
-                <div style="background: rgba(244, 67, 54, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #f44336;">
-                    <h4 style="color: #f44336; margin-top: 0;">❌ Error</h4>
-                    <p style="color: #ccc;">${data.error || 'Failed to sync with IGDB'}</p>
-                    <p style="font-size: 0.85em; color: #999;">Make sure you have configured your IGDB credentials in the .env file.</p>
-                    <button onclick="closeIGDBResponse(${gameId})" class="btn" style="margin-top: 10px; background: #666;">
-                        Close
-                    </button>
-                </div>
-            `;
+            // Show error
+            btn.innerHTML = '<span class="btn-icon">❌</span> Sync Failed';
+            btn.style.background = 'linear-gradient(135deg, #f44336 0%, #e91e63 100%)';
+            alert(`Failed to sync with IGDB:\n${data.message}\n\nCheck the terminal for more details.`);
+
+            // Re-enable button after 3 seconds
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="btn-icon">🔄</span> Sync with IGDB';
+                btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)';
+            }, 3000);
         }
     } catch (error) {
         console.error('IGDB sync error:', error);
-        responseDiv.innerHTML = `
-            <div style="background: rgba(244, 67, 54, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #f44336;">
-                <h4 style="color: #f44336; margin-top: 0;">❌ Error</h4>
-                <p style="color: #ccc;">Network error: ${error.message}</p>
-                <button onclick="closeIGDBResponse(${gameId})" class="btn" style="margin-top: 10px; background: #666;">
-                    Close
-                </button>
-            </div>
-        `;
-    } finally {
-        // Re-enable the button
-        if (event && event.target) {
-            event.target.disabled = false;
-        }
-    }
-}
+        btn.innerHTML = '<span class="btn-icon">❌</span> Network Error';
+        btn.style.background = 'linear-gradient(135deg, #f44336 0%, #e91e63 100%)';
+        alert(`Network error while syncing with IGDB:\n${error.message}`);
 
-function closeIGDBResponse(gameId) {
-    const responseDiv = document.getElementById(`igdbResponse-${gameId}`);
-    responseDiv.style.display = 'none';
-    responseDiv.innerHTML = '';
+        // Re-enable button after 3 seconds
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="btn-icon">🔄</span> Sync with IGDB';
+            btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)';
+        }, 3000);
+    }
 }
 
 // ==================== EXPAND FUNCTIONALITY ====================
@@ -1137,11 +1247,154 @@ function collapseTags(gameId) {
     if (!game || !game.tags) return;
 
     const container = document.getElementById(`tags-${gameId}`);
-    
+
     // Show only first 15 tags again
     container.innerHTML = game.tags.slice(0, 15).map(tag => `<span class="tag-pill">${tag}</span>`).join('') + `
         <button class="tag-more expand-btn" onclick="expandTags(${gameId})">
             +${game.tags.length - 15} more
         </button>
     `;
+}
+
+// Sync single game with RAWG
+async function syncSingleGameRAWG(gameId) {
+    const modal = document.getElementById('gameModal');
+    const detailDiv = document.getElementById('gameDetail');
+
+    // Show loading message
+    detailDiv.innerHTML = `
+        <div class="game-detail-content">
+            <div class="no-metadata-message">
+                <h3>Syncing with RAWG...</h3>
+                <p>Fetching game metadata from RAWG API. This may take a few seconds.</p>
+                <div style="margin-top: 2rem;">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`/api/sync-single-game/${gameId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: 'rawg' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Refresh games list
+            await loadGames();
+
+            // Close and reopen modal with updated data
+            closeModal();
+
+            // Find the updated game and show it
+            setTimeout(() => {
+                showGameDetail(gameId);
+            }, 300);
+        } else {
+            detailDiv.innerHTML = `
+                <div class="game-detail-content">
+                    <div class="no-metadata-message">
+                        <h3>Sync Failed</h3>
+                        <p>${data.message || 'Failed to sync with RAWG. Please try again.'}</p>
+                        <button class="action-btn" onclick="closeModal()" style="margin-top: 2rem;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error syncing with RAWG:', error);
+        detailDiv.innerHTML = `
+            <div class="game-detail-content">
+                <div class="no-metadata-message">
+                    <h3>Error</h3>
+                    <p>An error occurred while syncing with RAWG. Please try again.</p>
+                    <button class="action-btn" onclick="closeModal()" style="margin-top: 2rem;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Sync single game with IGDB
+async function syncSingleGameIGDB(gameId) {
+    const modal = document.getElementById('gameModal');
+    const detailDiv = document.getElementById('gameDetail');
+
+    // Show loading message
+    detailDiv.innerHTML = `
+        <div class="game-detail-content">
+            <div class="no-metadata-message">
+                <h3>Syncing with IGDB...</h3>
+                <p>Fetching game metadata from IGDB API. This may take a few seconds.</p>
+                <div style="margin-top: 2rem;">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`/api/sync-single-game/${gameId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: 'igdb' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Refresh games list
+            await loadGames();
+
+            // Close and reopen modal with updated data
+            closeModal();
+
+            // Find the updated game and show it
+            setTimeout(() => {
+                try {
+                    showGameDetail(gameId);
+                } catch (error) {
+                    console.error('Error showing game detail:', error);
+                    alert('Game synced successfully, but there was an error displaying it. Please refresh the page.');
+                }
+            }, 300);
+        } else {
+            detailDiv.innerHTML = `
+                <div class="game-detail-content">
+                    <div class="no-metadata-message">
+                        <h3>Sync Failed</h3>
+                        <p>${data.message || 'Failed to sync with IGDB. Please try again.'}</p>
+                        <button class="action-btn" onclick="closeModal()" style="margin-top: 2rem;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error syncing with IGDB:', error);
+        detailDiv.innerHTML = `
+            <div class="game-detail-content">
+                <div class="no-metadata-message">
+                    <h3>Error</h3>
+                    <p>An error occurred while syncing with IGDB. Please try again.</p>
+                    <button class="action-btn" onclick="closeModal()" style="margin-top: 2rem;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 }

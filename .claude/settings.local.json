@@ -3,7 +3,9 @@
     "allow": [
       "Bash(find:*)",
       "Bash(tree:*)",
-      "Bash(py -c:*)"
+      "Bash(py -c:*)",
+      "Bash(cmd /c move:*)",
+      "Bash(dir \"C:\\Users\\Thomas\\Desktop\\doc2\\Python\\data\"\" & dir \"C:UsersThomasDesktopdoc2PythonmyGamingLibdata\"\")"
     ],
     "deny": [],
     "ask": []

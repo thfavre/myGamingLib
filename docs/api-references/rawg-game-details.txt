@@ -1,0 +1,103 @@
+https://api.rawg.io/api/games/{id}
+
+Get details of the game.
+path Parameters
+id
+required
+string
+An ID or a slug identifying this Game.
+
+Responses
+200
+Response Schema: application/json
+id
+integer (ID)
+slug
+string <slug> (Slug) non-empty ^[-a-zA-Z0-9_]+$
+name
+string (Name) non-empty
+name_original
+string (Name original) non-empty
+description
+string (Description) non-empty
+metacritic
+integer (Metacritic)
+metacritic_platforms
+Array of objects (GamePlatformMetacritic)
+released
+string <date> (Released)
+tba
+boolean (TBA)
+updated
+string <date-time> (Updated)
+background_image
+string <uri> (Background image)
+background_image_additional
+string (Background image additional)
+website
+string <uri> (Website) non-empty
+rating
+required
+number (Rating)
+rating_top
+integer (Rating top)
+ratings
+object (Ratings)
+reactions
+object (Reactions)
+added
+integer (Added)
+added_by_status
+object (Added by status)
+playtime
+integer (Playtime)
+in hours
+
+screenshots_count
+integer (Screenshots count)
+movies_count
+integer (Movies count)
+creators_count
+integer (Creators count)
+achievements_count
+integer (Achievements count)
+parent_achievements_count
+string (Parent achievements count)
+reddit_url
+string (Reddit url) non-empty
+For example "https://www.reddit.com/r/uncharted/" or "uncharted"
+
+reddit_name
+string (Reddit name) non-empty
+reddit_description
+string (Reddit description) non-empty
+reddit_logo
+string <uri> (Reddit logo) non-empty
+reddit_count
+integer (Reddit count)
+twitch_count
+string (Twitch count)
+youtube_count
+string (Youtube count)
+reviews_text_count
+string (Reviews text count)
+ratings_count
+integer (Ratings count)
+suggestions_count
+integer (Suggestions count)
+alternative_names
+Array of strings (Alternative names)
+metacritic_url
+string (Metacritic url) non-empty
+For example "http://www.metacritic.com/game/playstation-4/the-witcher-3-wild-hunt"
+
+parents_count
+integer (Parents count)
+additions_count
+integer (Additions count)
+game_series_count
+integer (Game series count)
+esrb_rating
+object Nullable
+platforms
+Array of objects

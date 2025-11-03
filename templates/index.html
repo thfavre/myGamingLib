@@ -17,8 +17,12 @@
                     <span class="stat-value" id="totalGames">0</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-label">Synced:</span>
-                    <span class="stat-value" id="syncedGames">0</span>
+                    <span class="stat-label">RAWG Synced:</span>
+                    <span class="stat-value" id="syncedGamesRawg">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">IGDB Synced:</span>
+                    <span class="stat-value" id="syncedGamesIgdb">0</span>
                 </div>
                 <div class="stat">
                     <span class="stat-label">Local MP:</span>
@@ -40,6 +44,10 @@
             <button id="syncBtn" class="btn btn-secondary">
                 <span class="btn-icon">🔄</span>
                 Sync with RAWG
+            </button>
+            <button id="syncIgdbBtn" class="btn btn-igdb">
+                <span class="btn-icon">🎮</span>
+                Sync with IGDB
             </button>
             <button id="addManualBtn" class="btn btn-success">
                 <span class="btn-icon">➕</span>
@@ -74,6 +82,14 @@
                     <button class="close-btn" onclick="closePanel('syncingPanel')">&times;</button>
                 </div>
                 <div class="status-logs" id="syncingLogs"></div>
+            </div>
+
+            <div class="status-panel" id="igdbPanel" style="display: none;">
+                <div class="status-header">
+                    <h3>IGDB Metadata Sync</h3>
+                    <button class="close-btn" onclick="closePanel('igdbPanel')">&times;</button>
+                </div>
+                <div class="status-logs" id="igdbLogs"></div>
             </div>
         </div>
 
