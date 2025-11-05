@@ -124,7 +124,9 @@ document.addEventListener('alpine:init', () => {
                 if (this.sortBy === 'title') {
                     return (a.title || '').localeCompare(b.title || '');
                 } else if (this.sortBy === 'rating') {
-                    return (b.rawg__rating || 0) - (a.rawg__rating || 0);
+                    const ratingA = Formatters.calculateCombinedScore(a) || 0;
+                    const ratingB = Formatters.calculateCombinedScore(b) || 0;
+                    return ratingB - ratingA;
                 } else if (this.sortBy === 'release_date') {
                     return (b.rawg__released || '').localeCompare(a.rawg__released || '');
                 }
