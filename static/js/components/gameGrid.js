@@ -13,8 +13,6 @@ const GameGrid = {
         const rating = game.rawg__rating ? Formatters.formatRating(game.rawg__rating) : null;
         const releaseYear = game.rawg__released ? Formatters.getYear(game.rawg__released) : null;
 
-        const localPlayers = this._formatLocalPlayers(game);
-        const onlinePlayers = this._formatOnlinePlayers(game);
         const genres = this._formatGenres(game);
 
         return `
@@ -28,8 +26,6 @@ const GameGrid = {
                     <div class="game-card-meta">
                         ${rating ? `<span class="meta-badge badge-rating">★ ${rating}</span>` : ''}
                         ${releaseYear ? `<span class="meta-badge badge-date">${releaseYear}</span>` : ''}
-                        ${localPlayers}
-                        ${onlinePlayers}
                     </div>
                     <div class="game-card-genres">
                         ${genres}
@@ -37,28 +33,6 @@ const GameGrid = {
                 </div>
             </div>
         `;
-    },
-
-    /**
-     * Format local players badge
-     */
-    _formatLocalPlayers(game) {
-        const max = game.rawg__local_players_max;
-        if (!max || max <= 1) return '';
-
-        const min = game.rawg__local_players_min || 1;
-        return `<span class="meta-badge badge-local">Local ${min}-${max}P</span>`;
-    },
-
-    /**
-     * Format online players badge
-     */
-    _formatOnlinePlayers(game) {
-        const max = game.rawg__online_players_max;
-        if (!max || max <= 1) return '';
-
-        const min = game.rawg__online_players_min || 1;
-        return `<span class="meta-badge badge-online">Online ${min}-${max}P</span>`;
     },
 
     /**
