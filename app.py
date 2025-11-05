@@ -278,6 +278,26 @@ def get_task_status(task_type):
         'result': status['result']
     })
 
+@app.route('/api/task_status', methods=['GET'])
+def get_all_task_status():
+    """Get status of all background tasks."""
+    return jsonify({
+        'success': True,
+        'scraping': {
+            'active': task_status['scraping']['running'],
+            'logs': task_status['scraping']['logs'],
+            'waiting_for_continue': task_status['scraping'].get('chrome_open', False) and not task_status['scraping']['running']
+        },
+        'syncing': {
+            'active': task_status['syncing']['running'],
+            'logs': task_status['syncing']['logs']
+        },
+        'igdb': {
+            'active': task_status['igdb']['running'],
+            'logs': task_status['igdb']['logs']
+        }
+    })
+
 @app.route('/api/clear-logs/<task_type>', methods=['POST'])
 def clear_logs(task_type):
     """Clear logs for a specific task."""
@@ -646,7 +666,7 @@ def print_game_info(game_id):
 def sync_single_game(game_id):
     """Sync a single game with RAWG or IGDB."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         source = data.get('source', 'rawg').lower()
 
         # Get the game
@@ -662,42 +682,72 @@ def sync_single_game(game_id):
         game_title = game.get('title')
 
         if source == 'rawg':
+            print(f"\n🔄 RAWG SYNC STARTED FOR: {game_title} (ID: {game_id})")
+            
             # Sync with RAWG
             from src.sync.rawg_sync import RAWGSyncer
             syncer = RAWGSyncer()
 
             # Search for the game
-            search_results = syncer.search_game(game_title)
+            print(f"🔍 Searching RAWG for: {game_title}")
+            search_result = syncer.search_game(game_title)
 
-            if not search_results:
+            if not search_result:
+                print(f"❌ Could not find '{game_title}' on RAWG")
                 return jsonify({
                     'success': False,
-                    'message': f'Could not find "{game_title}" on RAWG'
+                    'message': f'Could not find "{game_title}" on RAWG. Try searching with a different name.'
                 }), 404
 
-            # Use first result
-            rawg_game_id = search_results[0].get('id')
+            # Use the search result directly (search_game returns a single game object)
+            rawg_game_id = search_result.get('id')
+            rawg_game_name = search_result.get('name')
+            print(f"✓ Found match: {rawg_game_name} (RAWG ID: {rawg_game_id})")
 
-            # Fetch all metadata
-            game_details = syncer.fetch_game_details(rawg_game_id)
-            screenshots = syncer.fetch_screenshots(rawg_game_id)
-            achievements = syncer.fetch_achievements(rawg_game_id)
-            trailers = syncer.fetch_trailers(rawg_game_id)
-            stores = syncer.fetch_stores(rawg_game_id)
+            # Fetch all metadata using correct method names
+            print("📥 Fetching game details...")
+            game_details = syncer.get_game_details(rawg_game_id)
+            if not game_details:
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to fetch game details from RAWG'
+                }), 500
+
+            print("📷 Fetching screenshots...")
+            screenshots = syncer.get_game_screenshots(rawg_game_id)
+            
+            print("🏆 Fetching achievements...")
+            achievements = syncer.get_game_achievements(rawg_game_id)
+            
+            print("🎬 Fetching trailers...")
+            trailers = syncer.get_game_trailers(rawg_game_id)
+            
+            print("🛒 Fetching store info...")
+            stores = syncer.get_game_stores(rawg_game_id)
 
             # Extract metadata
+            print("🔧 Extracting metadata...")
             metadata = syncer.extract_all_metadata(
                 game_details, screenshots, achievements, trailers, stores
             )
 
             # Update database
+            print("💾 Updating database...")
             from src.database import update_game_with_rawg_data
-            update_game_with_rawg_data(game_id, metadata)
-
-            return jsonify({
-                'success': True,
-                'message': f'Successfully synced "{game_title}" with RAWG'
-            })
+            success = update_game_with_rawg_data(game_id, metadata)
+            
+            if success:
+                print(f"✅ RAWG sync complete for: {game_title}")
+                return jsonify({
+                    'success': True,
+                    'message': f'Successfully synced "{game_title}" with RAWG'
+                })
+            else:
+                print(f"❌ Failed to update database")
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to update database with RAWG data'
+                }), 500
 
         elif source == 'igdb':
             # Sync with IGDB - Print debug info to terminal
@@ -793,7 +843,7 @@ def sync_single_game(game_id):
         traceback.print_exc()
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': f'Sync failed: {str(e)}'
         }), 500
 
 @app.route('/api/sync-igdb', methods=['POST'])
