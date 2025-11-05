@@ -125,6 +125,25 @@ const Formatters = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    /**
+     * Strip HTML tags and convert to plain text with newlines
+     */
+    stripHtml(html) {
+        if (!html) return '';
+
+        // Create a temporary div to parse HTML
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        // Get text content (automatically strips tags)
+        let text = temp.textContent || temp.innerText || '';
+
+        // Clean up multiple spaces and newlines
+        text = text.replace(/\s+/g, ' ').trim();
+
+        return text;
     }
 };
 

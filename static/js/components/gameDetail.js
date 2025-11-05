@@ -124,14 +124,45 @@ const GameDetail = {
      * Build description section
      */
     _buildDescriptionSection(description, storyline) {
+        const descId = `desc-${Math.random().toString(36).substr(2, 9)}`;
+        const storyId = `story-${Math.random().toString(36).substr(2, 9)}`;
+        const descBtnId = `descBtn-${Math.random().toString(36).substr(2, 9)}`;
+        const storyBtnId = `storyBtn-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Strip HTML tags from description
+        const cleanDesc = Formatters.stripHtml(description);
+        const cleanStory = storyline ? Formatters.stripHtml(storyline) : null;
+
+        // Check if description is long
+        const descIsLong = cleanDesc.length > 500;
+        const descShort = descIsLong ? cleanDesc.substring(0, 500) + '...' : cleanDesc;
+
+        const storyIsLong = cleanStory && cleanStory.length > 300;
+        const storyShort = storyIsLong ? cleanStory.substring(0, 300) + '...' : cleanStory;
+
         return `
             <div class="game-detail-section">
                 <h3>📖 Description</h3>
-                <div class="game-description">${Formatters.nl2br(Formatters.escapeHtml(description))}</div>
-                ${storyline ? `
+                <div class="game-description" id="${descId}">
+                    ${descIsLong ? descShort : cleanDesc}
+                </div>
+                ${descIsLong ? `
+                    <button id="${descBtnId}" class="expand-btn" style="margin-top: 10px;" onclick="GameDetail.toggleDescription('${descId}', '${descBtnId}', \`${cleanDesc.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`, 500)">
+                        Show More
+                    </button>
+                ` : ''}
+
+                ${cleanStory ? `
                     <div style="margin-top: 20px; padding: 15px; background: rgba(250, 112, 154, 0.1); border-left: 4px solid #fa709a; border-radius: 4px;">
                         <h4 style="color: #fa709a; margin-bottom: 10px;">📚 Storyline (IGDB)</h4>
-                        <p style="color: #ccc; line-height: 1.6;">${Formatters.nl2br(Formatters.escapeHtml(storyline))}</p>
+                        <p style="color: #ccc; line-height: 1.6;" id="${storyId}">
+                            ${storyIsLong ? storyShort : cleanStory}
+                        </p>
+                        ${storyIsLong ? `
+                            <button id="${storyBtnId}" class="expand-btn" style="margin-top: 10px;" onclick="GameDetail.toggleDescription('${storyId}', '${storyBtnId}', \`${cleanStory.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`, 300)">
+                                Show More
+                            </button>
+                        ` : ''}
                     </div>
                 ` : ''}
             </div>
@@ -203,11 +234,7 @@ const GameDetail = {
                         <span class="detail-label">Themes:</span>
                         <span class="detail-value">${Array.isArray(game.igdb__themes) ? game.igdb__themes.join(', ') : game.igdb__themes}</span>
                     </div>` : ''}
-                    ${game.rawg__esrb_rating || game.igdb__age_ratings ? `
-                    <div class="detail-item">
-                        <span class="detail-label">Age Rating:</span>
-                        <span class="detail-value">${game.rawg__esrb_rating || (Array.isArray(game.igdb__age_ratings) ? game.igdb__age_ratings.join(', ') : game.igdb__age_ratings)}</span>
-                    </div>` : ''}
+                    ${this._formatAgeRating(game)}
                     ${game.rawg__website || game.igdb__url ? `
                     <div class="detail-item">
                         <span class="detail-label">Website:</span>
@@ -557,6 +584,63 @@ const GameDetail = {
     _formatIGDBArray(field) {
         if (!field || !Array.isArray(field) || field.length === 0) return '';
         return field.join(', ');
+    },
+
+    /**
+     * Format age rating properly - using extracted fields from IGDB
+     */
+    _formatAgeRating(game) {
+        let ratings = [];
+
+        // Get RAWG ESRB rating
+        if (game.rawg__esrb_rating) {
+            ratings.push(game.rawg__esrb_rating);
+        }
+
+        // Get IGDB extracted ratings (already processed by backend)
+        if (game.igdb__esrb_rating) {
+            ratings.push(`ESRB: ${game.igdb__esrb_rating}`);
+        }
+
+        if (game.igdb__pegi_rating) {
+            ratings.push(game.igdb__pegi_rating);
+        }
+
+        if (ratings.length === 0) return '';
+
+        // Remove duplicates
+        ratings = [...new Set(ratings)];
+
+        return `
+            <div class="detail-item">
+                <span class="detail-label">Age Rating:</span>
+                <span class="detail-value">${ratings.join(', ')}</span>
+            </div>
+        `;
+    },
+
+    /**
+     * Toggle description expansion
+     */
+    toggleDescription(elementId, buttonId, fullText, truncateLength) {
+        const element = document.getElementById(elementId);
+        const button = document.getElementById(buttonId);
+
+        if (!element || !button) return;
+
+        const isExpanded = button.textContent.trim() === 'Show Less';
+
+        if (isExpanded) {
+            // Collapse
+            element.textContent = fullText.substring(0, truncateLength) + '...';
+            button.textContent = 'Show More';
+            button.classList.remove('collapse-btn');
+        } else {
+            // Expand
+            element.textContent = fullText;
+            button.textContent = 'Show Less';
+            button.classList.add('collapse-btn');
+        }
     },
 
     /**
