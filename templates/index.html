@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Epic Games Library Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
     <div class="container">
@@ -155,6 +155,22 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- Alpine.js - Must load first -->
+    <script defer src="{{ url_for('static', filename='lib/alpine.js') }}"></script>
+
+    <!-- Utilities -->
+    <script src="{{ url_for('static', filename='js/utils/formatters.js') }}"></script>
+
+    <!-- Services -->
+    <script src="{{ url_for('static', filename='js/services/api.js') }}"></script>
+
+    <!-- Components -->
+    <script src="{{ url_for('static', filename='js/components/gameDetail.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/gameGrid.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/gameSearch.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/taskStatus.js') }}"></script>
+
+    <!-- Main App Initialization -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,84 @@
+/**
+ * Form Styles
+ * Inputs, selects, and form controls
+ */
+
+/* Search Input */
+.search-input {
+    flex: 1;
+    min-width: 250px;
+    padding: 12px 20px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font-size: 1em;
+    transition: border-color var(--transition-normal);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+}
+
+/* Filter Select */
+.filter-select {
+    padding: 12px 20px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font-size: 1em;
+    cursor: pointer;
+    transition: border-color var(--transition-normal);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+}
+
+/* General Input Styles (for modals, forms) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea {
+    width: 100%;
+    padding: 12px;
+    font-size: 1em;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    box-sizing: border-box;
+    transition: border-color var(--transition-normal);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+}
+
+/* Form Groups */
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+/* Search Status */
+#searchStatus {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--color-text-muted);
+}

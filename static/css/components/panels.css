@@ -1,0 +1,61 @@
+/**
+ * Panel Styles
+ * Status panels and log displays
+ */
+
+/* Status Panels Container */
+.status-panels {
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Individual Status Panel */
+.status-panel {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    backdrop-filter: blur(10px);
+}
+
+/* Status Panel Header */
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.status-header h3 {
+    color: var(--color-accent-primary);
+}
+
+/* Status Logs */
+.status-logs {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    padding: var(--spacing-md);
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.status-logs p {
+    margin: 5px 0;
+}
+
+/* Continue Button Container (for scraping) */
+#continueButtonContainer {
+    text-align: center;
+    padding: var(--spacing-lg);
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+}
+
+#continueButtonContainer p {
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.1em;
+    color: var(--color-success);
+}
