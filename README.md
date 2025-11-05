@@ -2,7 +2,8 @@
 
 A modern web application for managing and exploring your Epic Games library with rich metadata from multiple gaming databases.
 
-![Epic Gaming Library](https://github.com/user-attachments/assets/baef49ee-b1d5-403e-ac26-ec9e91d214e8)
+<img width="800" height="450" alt="image" src="https://github.com/user-attachments/assets/4e53e52b-eb1a-4d18-a533-17a1dcb48447" />
+
 
 ## ✨ Features
 
@@ -13,6 +14,8 @@ A modern web application for managing and exploring your Epic Games library with
   <img width="366" height="313" alt="image" src="https://github.com/user-attachments/assets/6900ec67-0e03-4714-8c79-f03bc24a7e14" />
 
 - **Rich Game Data** - Ratings, screenshots, achievements, player counts, trailers, genres, and more
+  <img width="366" height="313" alt="image" src="https://github.com/user-attachments/assets/a0e2b318-a8b9-4f3e-95c1-62fea862c419" />
+
 
 ### User Interface
 - **Modern Dashboard** - Clean, responsive interface with dark theme
