@@ -16,3 +16,88 @@
 @import 'components/cards.css';
 @import 'components/modals.css';
 @import 'components/panels.css';
+
+/* Player Count Badges on Game Cards */
+.player-count-badges {
+    display: flex;
+    gap: 6px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+}
+
+.player-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.player-badge.local-players {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.player-badge.online-players {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.player-badge.single-player {
+    background: linear-gradient(135deg, #9E9E9E, #757575);
+    color: white;
+    box-shadow: 0 2px 4px rgba(158, 158, 158, 0.3);
+}
+
+.player-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+/* Dropdown separator styling */
+.filter-select option[disabled] {
+    background-color: #f5f5f5;
+    color: #999;
+    font-style: italic;
+    font-weight: bold;
+    text-align: center;
+}
+
+.btn-filter {
+    background: #2196F3;
+    color: white;
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.btn-filter:hover {
+    background: #1976D2;
+}
+
+.btn-clear {
+    background: #f5f5f5;
+    color: #666;
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+}
+
+.btn-clear:hover {
+    background: #e0e0e0;
+}
+
+@media (max-width: 768px) {
+    .player-count-badges {
+        justify-content: center;
+    }
+    
+    .player-badge {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+}

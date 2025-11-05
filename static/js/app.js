@@ -29,6 +29,9 @@ document.addEventListener('alpine:init', () => {
         searchQuery: '',
         selectedGenre: '',
         selectedPlayerFilter: '',
+        selectedLocalPlayers: '',
+        selectedOnlinePlayers: '',
+        selectedPlayerCount: '',
         sortBy: 'title',
 
         // Initialize the store
@@ -119,6 +122,58 @@ document.addEventListener('alpine:init', () => {
                 });
             }
 
+            // Apply combined player count filter
+            if (this.selectedPlayerCount) {
+                if (this.selectedPlayerCount === '1') {
+                    // Single player only
+                    filtered = filtered.filter(game => {
+                        const localMax = game.rawg__local_players_max;
+                        const onlineMax = game.rawg__online_players_max;
+                        return (!localMax || localMax === 1) && (!onlineMax || onlineMax === 1);
+                    });
+                } else if (this.selectedPlayerCount.startsWith('local_')) {
+                    // Local multiplayer filter
+                    const minPlayers = parseInt(this.selectedPlayerCount.split('_')[1]);
+                    filtered = filtered.filter(game => {
+                        const localMax = game.rawg__local_players_max;
+                        return localMax && localMax >= minPlayers;
+                    });
+                } else if (this.selectedPlayerCount.startsWith('online_')) {
+                    // Online multiplayer filter
+                    const minPlayers = parseInt(this.selectedPlayerCount.split('_')[1]);
+                    filtered = filtered.filter(game => {
+                        const onlineMax = game.rawg__online_players_max;
+                        return onlineMax && onlineMax >= minPlayers;
+                    });
+                }
+            }
+
+            // Apply local players filter
+            if (this.selectedLocalPlayers) {
+                const minPlayers = parseInt(this.selectedLocalPlayers);
+                filtered = filtered.filter(game => {
+                    const localMax = game.rawg__local_players_max;
+                    if (minPlayers === 1) {
+                        return !localMax || localMax === 1;
+                    } else {
+                        return localMax && localMax >= minPlayers;
+                    }
+                });
+            }
+
+            // Apply online players filter
+            if (this.selectedOnlinePlayers) {
+                const minPlayers = parseInt(this.selectedOnlinePlayers);
+                filtered = filtered.filter(game => {
+                    const onlineMax = game.rawg__online_players_max;
+                    if (minPlayers === 1) {
+                        return !onlineMax || onlineMax === 1;
+                    } else {
+                        return onlineMax && onlineMax >= minPlayers;
+                    }
+                });
+            }
+
             // Apply sorting
             filtered.sort((a, b) => {
                 if (this.sortBy === 'title') {
@@ -129,6 +184,10 @@ document.addEventListener('alpine:init', () => {
                     return ratingB - ratingA;
                 } else if (this.sortBy === 'release_date') {
                     return (b.rawg__released || '').localeCompare(a.rawg__released || '');
+                } else if (this.sortBy === 'local_players') {
+                    return (b.rawg__local_players_max || 0) - (a.rawg__local_players_max || 0);
+                } else if (this.sortBy === 'online_players') {
+                    return (b.rawg__online_players_max || 0) - (a.rawg__online_players_max || 0);
                 }
                 return 0;
             });
@@ -276,12 +335,129 @@ function setupFilterListeners() {
         renderGames();
     });
 
+    // Combined Player Count filter
+    document.getElementById('playerCountFilter')?.addEventListener('change', (e) => {
+        gameStore.selectedPlayerCount = e.target.value;
+        gameStore.applyFilters();
+        renderGames();
+    });
+
+    // Local players filter
+    document.getElementById('localPlayersFilter')?.addEventListener('change', (e) => {
+        gameStore.selectedLocalPlayers = e.target.value;
+        gameStore.applyFilters();
+        renderGames();
+    });
+
+    // Online players filter
+    document.getElementById('onlinePlayersFilter')?.addEventListener('change', (e) => {
+        gameStore.selectedOnlinePlayers = e.target.value;
+        gameStore.applyFilters();
+        renderGames();
+    });
+
     // Sort by
     document.getElementById('sortBy')?.addEventListener('change', (e) => {
         gameStore.sortBy = e.target.value;
         gameStore.applyFilters();
         renderGames();
     });
+
+    // Apply and Clear buttons
+    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
+        gameStore.applyFilters();
+        renderGames();
+    });
+
+    document.getElementById('clearFiltersBtn')?.addEventListener('click', () => {
+        clearAllFilters();
+    });
+}
+
+/**
+ * Clear all filters
+ */
+function clearAllFilters() {
+    const gameStore = Alpine.store('games');
+
+    // Reset filter values
+    document.getElementById('searchInput').value = '';
+    document.getElementById('genreFilter').value = '';
+    document.getElementById('playerFilter').value = '';
+    document.getElementById('playerCountFilter').value = '';
+    document.getElementById('sortBy').value = 'title';
+
+    // Reset store values
+    gameStore.searchQuery = '';
+    gameStore.selectedGenre = '';
+    gameStore.selectedPlayerFilter = '';
+    gameStore.selectedPlayerCount = '';
+    gameStore.sortBy = 'title';
+
+    // Reapply filters and render
+    gameStore.applyFilters();
+    renderGames();
+}
+
+/**
+ * Apply advanced player count filters
+ */
+function applyAdvancedPlayerFilters() {
+    const minLocal = parseInt(document.getElementById('minLocalPlayers').value) || null;
+    const maxLocal = parseInt(document.getElementById('maxLocalPlayers').value) || null;
+    const minOnline = parseInt(document.getElementById('minOnlinePlayers').value) || null;
+    const maxOnline = parseInt(document.getElementById('maxOnlinePlayers').value) || null;
+
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (minLocal) params.set('min_local_players', minLocal);
+    if (maxLocal) params.set('max_local_players', maxLocal);
+    if (minOnline) params.set('min_online_players', minOnline);
+    if (maxOnline) params.set('max_online_players', maxOnline);
+
+    // Load filtered games from API
+    loadGamesWithFilters(params);
+}
+
+/**
+ * Clear advanced player count filters
+ */
+function clearAdvancedPlayerFilters() {
+    document.getElementById('minLocalPlayers').value = '';
+    document.getElementById('maxLocalPlayers').value = '';
+    document.getElementById('minOnlinePlayers').value = '';
+    document.getElementById('maxOnlinePlayers').value = '';
+
+    // Reload all games without filters
+    Alpine.store('games').loadGames();
+}
+
+/**
+ * Load games with specific filters from API
+ */
+async function loadGamesWithFilters(params) {
+    const gameStore = Alpine.store('games');
+    gameStore.isLoading = true;
+
+    try {
+        const url = '/api/games' + (params.toString() ? '?' + params.toString() : '');
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            gameStore.allGames = data.games || [];
+            gameStore.updateStats();
+            gameStore.extractGenres();
+            gameStore.applyFilters();
+            renderGames();
+        } else {
+            console.error('Failed to load filtered games:', data.error);
+        }
+    } catch (error) {
+        console.error('Failed to load filtered games:', error);
+    } finally {
+        gameStore.isLoading = false;
+    }
 }
 
 /**

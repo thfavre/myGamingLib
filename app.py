@@ -106,9 +106,49 @@ def index():
 
 @app.route('/api/games', methods=['GET'])
 def get_games():
-    """Get all games from the database."""
+    """Get all games from the database with optional filtering."""
     try:
+        # Get filter parameters
+        min_local_players = request.args.get('min_local_players', type=int)
+        min_online_players = request.args.get('min_online_players', type=int)
+        max_local_players = request.args.get('max_local_players', type=int)
+        max_online_players = request.args.get('max_online_players', type=int)
+        multiplayer_type = request.args.get('multiplayer_type', '')
+        
         games = get_all_games()
+        
+        # Apply player count filters
+        if min_local_players is not None:
+            games = [g for g in games if g.get('rawg__local_players_max') and g.get('rawg__local_players_max') >= min_local_players]
+        
+        if max_local_players is not None:
+            games = [g for g in games if g.get('rawg__local_players_max') and g.get('rawg__local_players_max') <= max_local_players]
+            
+        if min_online_players is not None:
+            games = [g for g in games if g.get('rawg__online_players_max') and g.get('rawg__online_players_max') >= min_online_players]
+            
+        if max_online_players is not None:
+            games = [g for g in games if g.get('rawg__online_players_max') and g.get('rawg__online_players_max') <= max_online_players]
+        
+        # Apply multiplayer type filter
+        if multiplayer_type == 'local':
+            games = [g for g in games if g.get('rawg__local_players_max') and g.get('rawg__local_players_max') > 1]
+        elif multiplayer_type == 'online':
+            games = [g for g in games if g.get('rawg__online_players_max') and g.get('rawg__online_players_max') > 1]
+        elif multiplayer_type == 'singleplayer':
+            games = [g for g in games if (not g.get('rawg__local_players_max') or g.get('rawg__local_players_max') <= 1) and 
+                     (not g.get('rawg__online_players_max') or g.get('rawg__online_players_max') <= 1)]
+        elif multiplayer_type == 'coop_local':
+            games = [g for g in games if g.get('rawg__local_players_max') and g.get('rawg__local_players_max') >= 2]
+        elif multiplayer_type == 'coop_online':
+            games = [g for g in games if g.get('rawg__online_players_max') and g.get('rawg__online_players_max') >= 2]
+        elif multiplayer_type == 'party_local':
+            games = [g for g in games if g.get('rawg__local_players_max') and g.get('rawg__local_players_max') >= 4]
+        elif multiplayer_type == 'party_online':
+            games = [g for g in games if g.get('rawg__online_players_max') and g.get('rawg__online_players_max') >= 4]
+        elif multiplayer_type == 'large_online':
+            games = [g for g in games if g.get('rawg__online_players_max') and g.get('rawg__online_players_max') >= 10]
+
         return jsonify({
             'success': True,
             'games': games,

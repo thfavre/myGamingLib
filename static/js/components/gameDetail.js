@@ -291,6 +291,8 @@ const GameDetail = {
                 </div>
             </div>
 
+            ${this._buildPlayerCountSection(game)}
+
             <div class="game-detail-section">
                 <h3>ℹ️ Game Information</h3>
                 <div class="game-details-list">
@@ -324,6 +326,101 @@ const GameDetail = {
                         <span class="detail-label">Reddit:</span>
                         <a href="${game.rawg__reddit_url}" target="_blank" class="detail-link">r/${game.rawg__reddit_name || 'community'} 💬</a>
                     </div>` : ''}
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Build dedicated player count section - KEY FEATURE
+     */
+    _buildPlayerCountSection(game) {
+        const localMin = game.rawg__local_players_min;
+        const localMax = game.rawg__local_players_max;
+        const onlineMin = game.rawg__online_players_min;
+        const onlineMax = game.rawg__online_players_max;
+
+        // Check if we have any player count data
+        const hasPlayerData = localMin || localMax || onlineMin || onlineMax;
+
+        if (!hasPlayerData) {
+            return `
+                <div class="game-detail-section">
+                    <h3>👥 Player Count</h3>
+                    <div class="player-count-display">
+                        <div class="player-count-unknown">
+                            <span class="player-icon">❓</span>
+                            <span class="player-text">Player count information not available</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Build player count display
+        let playerCountHTML = '';
+
+        // Local players
+        if (localMax && localMax > 1) {
+            const localDisplay = localMin && localMin !== localMax ? `${localMin}-${localMax}` : `${localMax}`;
+            playerCountHTML += `
+                <div class="player-count-item local-players">
+                    <div class="player-count-header">
+                        <span class="player-icon">👥</span>
+                        <span class="player-label">Local Multiplayer</span>
+                    </div>
+                    <div class="player-count-value">${localDisplay} players</div>
+                    <div class="player-count-desc">Couch co-op and local party gaming</div>
+                </div>
+            `;
+        } else if (localMax === 1 || (!localMax && !onlineMax)) {
+            playerCountHTML += `
+                <div class="player-count-item single-player">
+                    <div class="player-count-header">
+                        <span class="player-icon">🎮</span>
+                        <span class="player-label">Single Player</span>
+                    </div>
+                    <div class="player-count-value">1 player</div>
+                    <div class="player-count-desc">Solo gaming experience</div>
+                </div>
+            `;
+        }
+
+        // Online players
+        if (onlineMax && onlineMax > 1) {
+            const onlineDisplay = onlineMin && onlineMin !== onlineMax ? `${onlineMin}-${onlineMax}` : `${onlineMax}`;
+            let onlineDesc = 'Online multiplayer gaming';
+
+            // Add descriptive text based on player count
+            if (onlineMax >= 100) {
+                onlineDesc = 'Massive multiplayer online (MMO)';
+            } else if (onlineMax >= 50) {
+                onlineDesc = 'Large-scale online battles';
+            } else if (onlineMax >= 10) {
+                onlineDesc = 'Party-sized online matches';
+            } else if (onlineMax >= 4) {
+                onlineDesc = 'Small group online play';
+            } else {
+                onlineDesc = 'Online co-op and versus';
+            }
+
+            playerCountHTML += `
+                <div class="player-count-item online-players">
+                    <div class="player-count-header">
+                        <span class="player-icon">🌐</span>
+                        <span class="player-label">Online Multiplayer</span>
+                    </div>
+                    <div class="player-count-value">${onlineDisplay} players</div>
+                    <div class="player-count-desc">${onlineDesc}</div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="game-detail-section">
+                <h3>👥 Player Count</h3>
+                <div class="player-count-display">
+                    ${playerCountHTML}
                 </div>
             </div>
         `;
@@ -648,103 +745,6 @@ const GameDetail = {
 
         return `
             <div class="game-detail-section">
-                <h3>🏷️ Tags</h3>
-                <div class="tags-container" id="tags-${game.id}">
-                    ${tagsHTML}
-                    ${expandButton}
-                </div>
-            </div>
-        `;
-    },
-
-    /**
-     * Format IGDB array fields
-     */
-    _formatIGDBArray(field) {
-        if (!field || !Array.isArray(field) || field.length === 0) return '';
-        return field.join(', ');
-    },
-
-    /**
-     * Format age rating properly - using extracted fields from IGDB
-     */
-    _formatAgeRating(game) {
-        let ratings = [];
-
-        // Get RAWG ESRB rating
-        if (game.rawg__esrb_rating) {
-            ratings.push(game.rawg__esrb_rating);
-        }
-
-        // Get IGDB extracted ratings (already processed by backend)
-        if (game.igdb__esrb_rating) {
-            ratings.push(`ESRB: ${game.igdb__esrb_rating}`);
-        }
-
-        if (game.igdb__pegi_rating) {
-            ratings.push(game.igdb__pegi_rating);
-        }
-
-        if (ratings.length === 0) return '';
-
-        // Remove duplicates
-        ratings = [...new Set(ratings)];
-
-        return `
-            <div class="detail-item">
-                <span class="detail-label">Age Rating:</span>
-                <span class="detail-value">${ratings.join(', ')}</span>
-            </div>
-        `;
-    },
-
-    /**
-     * Toggle description expansion
-     */
-    toggleDescription(elementId, buttonId, fullText, truncateLength) {
-        const element = document.getElementById(elementId);
-        const button = document.getElementById(buttonId);
-
-        if (!element || !button) return;
-
-        const isExpanded = button.textContent.trim() === 'Show Less';
-
-        if (isExpanded) {
-            // Collapse
-            element.textContent = fullText.substring(0, truncateLength) + '...';
-            button.textContent = 'Show More';
-            button.classList.remove('collapse-btn');
-        } else {
-            // Expand
-            element.textContent = fullText;
-            button.textContent = 'Show Less';
-            button.classList.add('collapse-btn');
-        }
-    },
-
-    /**
-     * Toggle rating breakdown visibility
-     */
-    toggleRatingBreakdown(breakdownId, buttonId) {
-        const breakdown = document.getElementById(breakdownId);
-        const button = document.getElementById(buttonId);
-
-        if (!breakdown || !button) return;
-
-        const isVisible = breakdown.style.display !== 'none';
-
-        if (isVisible) {
-            // Hide
-            breakdown.style.display = 'none';
-            button.textContent = '📊 Show Breakdown';
-            button.classList.remove('collapse-btn');
-        } else {
-            // Show
-            breakdown.style.display = 'block';
-            button.textContent = '📊 Hide Breakdown';
-            button.classList.add('collapse-btn');
-        }
-    },
 
     /**
      * Sync a game with RAWG or IGDB

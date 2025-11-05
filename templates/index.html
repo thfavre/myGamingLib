@@ -100,18 +100,43 @@
                 <select id="genreFilter" class="filter-select">
                     <option value="">All Genres</option>
                 </select>
-                <select id="playerFilter" class="filter-select">
-                    <option value="">All Games</option>
-                    <option value="local">Local Multiplayer</option>
-                    <option value="online">Online Multiplayer</option>
-                    <option value="singleplayer">Single Player Only</option>
+
+                <!-- Combined Player Count Filter -->
+                <select id="playerCountFilter" class="filter-select" title="Player Count">
+                    <option value="">Any Players</option>
+                    <option value="1">1 Player</option>
+                    <option disabled>──── Local ────</option>
+                    <option value="local_2">Local: 2+ Players</option>
+                    <option value="local_3">Local: 3+ Players</option>
+                    <option value="local_4">Local: 4+ Players</option>
+                    <option disabled>──── Online ────</option>
+                    <option value="online_2">Online: 2+ Players</option>
+                    <option value="online_3">Online: 3+ Players</option>
+                    <option value="online_4">Online: 4+ Players</option>
+                    <option value="online_10">Online: 10+ Players</option>
                 </select>
+
                 <select id="sortBy" class="filter-select">
                     <option value="title">Sort by Title</option>
                     <option value="rating">Sort by Rating</option>
                     <option value="release_date">Sort by Release Date</option>
+                    <option disabled>──── Online ────</option>
+                    <option value="online_2">Online: 2+ Players</option>
+                    <option value="online_3">Online: 3+ Players</option>
+                    <option value="online_4">Online: 4+ Players</option>
+                    <option value="online_10">Online: 10+ Players</option>
+                </select>
+
+                <select id="sortBy" class="filter-select">
+                    <option value="title">Sort by Title</option>
+                    <option value="rating">Sort by Rating</option>
+                    <option value="release_date">Sort by Release Date</option>
+                    <option value="local_players">Sort by Local Players</option>
+                    <option value="online_players">Sort by Online Players</option>
                 </select>
             </div>
+            <button id="applyFiltersBtn" class="btn btn-filter">Apply Filters</button>
+            <button id="clearFiltersBtn" class="btn btn-clear">Clear</button>
         </div>
 
         <!-- Games Grid -->

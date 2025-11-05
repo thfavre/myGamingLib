@@ -14,6 +14,7 @@ const GameGrid = {
         const releaseYear = game.rawg__released ? Formatters.getYear(game.rawg__released) : null;
 
         const genres = this._formatGenres(game);
+        const playerCountBadges = this._formatPlayerCounts(game);
 
         return `
             <div class="game-card ${!hasSyncData ? 'no-sync' : ''}" onclick="GameGrid.showGameDetail(${game.id})">
@@ -27,6 +28,7 @@ const GameGrid = {
                         ${combinedScore ? `<span class="meta-badge badge-rating">★ ${combinedScore}/100</span>` : ''}
                         ${releaseYear ? `<span class="meta-badge badge-date">${releaseYear}</span>` : ''}
                     </div>
+                    ${playerCountBadges ? `<div class="player-count-badges">${playerCountBadges}</div>` : ''}
                     <div class="game-card-genres">
                         ${genres}
                     </div>
@@ -46,6 +48,44 @@ const GameGrid = {
             const genreName = typeof g === 'object' ? g.name : g;
             return `<span class="genre-tag">${Formatters.escapeHtml(genreName)}</span>`;
         }).join('');
+    },
+
+    /**
+     * Format player count information for card display
+     */
+    _formatPlayerCounts(game) {
+        const badges = [];
+        
+        // Local players
+        const localMin = game.rawg__local_players_min;
+        const localMax = game.rawg__local_players_max;
+        if (localMax && localMax > 1) {
+            if (localMin && localMin !== localMax) {
+                badges.push(`<span class="player-badge local-players" title="Local Players">${localMin}-${localMax} 👥</span>`);
+            } else {
+                badges.push(`<span class="player-badge local-players" title="Local Players">${localMax} 👥</span>`);
+            }
+        }
+        
+        // Online players
+        const onlineMin = game.rawg__online_players_min;
+        const onlineMax = game.rawg__online_players_max;
+        if (onlineMax && onlineMax > 1) {
+            if (onlineMin && onlineMin !== onlineMax) {
+                badges.push(`<span class="player-badge online-players" title="Online Players">${onlineMin}-${onlineMax} 🌐</span>`);
+            } else {
+                badges.push(`<span class="player-badge online-players" title="Online Players">${onlineMax} 🌐</span>`);
+            }
+        }
+        
+        // Single player indicator
+        if (!localMax || localMax <= 1) {
+            if (!onlineMax || onlineMax <= 1) {
+                badges.push(`<span class="player-badge single-player" title="Single Player">1 🎮</span>`);
+            }
+        }
+        
+        return badges.join('');
     },
 
     /**
