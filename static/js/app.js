@@ -363,12 +363,7 @@ function setupFilterListeners() {
         renderGames();
     });
 
-    // Apply and Clear buttons
-    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
-        gameStore.applyFilters();
-        renderGames();
-    });
-
+    // Clear button
     document.getElementById('clearFiltersBtn')?.addEventListener('click', () => {
         clearAllFilters();
     });
