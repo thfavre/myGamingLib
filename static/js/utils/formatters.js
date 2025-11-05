@@ -144,6 +144,46 @@ const Formatters = {
         text = text.replace(/\s+/g, ' ').trim();
 
         return text;
+    },
+
+    /**
+     * Calculate combined rating score on 0-100 scale
+     */
+    calculateCombinedScore(game) {
+        const rawgRating = game.rawg__rating;
+        const igdbRating = game.igdb__rating;
+        const metacritic = game.rawg__metacritic;
+        const igdbTotalRating = game.igdb__total_rating;
+
+        let scores = [];
+        let weights = [];
+
+        if (rawgRating) {
+            scores.push(parseFloat(rawgRating) * 20); // Convert 0-5 to 0-100
+            weights.push(game.rawg__ratings_count || 100);
+        }
+
+        if (igdbRating) {
+            const igdbScore = parseFloat(igdbRating) <= 5 ? parseFloat(igdbRating) * 20 : parseFloat(igdbRating);
+            scores.push(igdbScore);
+            weights.push(game.igdb__rating_count || 50);
+        }
+
+        if (igdbTotalRating) {
+            scores.push(parseFloat(igdbTotalRating)); // Already 0-100
+            weights.push(game.igdb__rating_count || 50);
+        }
+
+        if (metacritic) {
+            scores.push(parseFloat(metacritic)); // Already 0-100
+            weights.push(100);
+        }
+
+        if (scores.length === 0) return null;
+
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+        const combinedScore = scores.reduce((sum, score, i) => sum + (score * weights[i]), 0) / totalWeight;
+        return parseFloat(combinedScore.toFixed(1));
     }
 };
 

@@ -10,7 +10,7 @@ const GameGrid = {
     createGameCard(game) {
         const hasSyncData = game.rawg__synced || game.rawg_synced;
         const imageUrl = game.rawg__background_image || '';
-        const rating = game.rawg__rating ? Formatters.formatRating(game.rawg__rating) : null;
+        const combinedScore = Formatters.calculateCombinedScore(game);
         const releaseYear = game.rawg__released ? Formatters.getYear(game.rawg__released) : null;
 
         const genres = this._formatGenres(game);
@@ -24,7 +24,7 @@ const GameGrid = {
                 <div class="game-card-content">
                     <h3 class="game-card-title">${Formatters.escapeHtml(game.title)}</h3>
                     <div class="game-card-meta">
-                        ${rating ? `<span class="meta-badge badge-rating">★ ${rating}</span>` : ''}
+                        ${combinedScore ? `<span class="meta-badge badge-rating">★ ${combinedScore}/100</span>` : ''}
                         ${releaseYear ? `<span class="meta-badge badge-date">${releaseYear}</span>` : ''}
                     </div>
                     <div class="game-card-genres">

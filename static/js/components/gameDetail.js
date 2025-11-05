@@ -61,6 +61,35 @@ const GameDetail = {
         const igdbRating = game.igdb__rating ? Formatters.formatIgdbRating(game.igdb__rating) : null;
         const metacritic = game.rawg__metacritic || null;
 
+        // Calculate combined score for header
+        let combinedScore = null;
+        if (rawgRating || igdbRating || metacritic || game.igdb__total_rating) {
+            let scores = [];
+            let weights = [];
+
+            if (rawgRating) {
+                scores.push(parseFloat(rawgRating) * 20);
+                weights.push(game.rawg__ratings_count || 100);
+            }
+            if (igdbRating) {
+                scores.push(parseFloat(igdbRating) * 20);
+                weights.push(game.igdb__rating_count || 50);
+            }
+            if (game.igdb__total_rating) {
+                scores.push(parseFloat(game.igdb__total_rating));
+                weights.push(game.igdb__rating_count || 50);
+            }
+            if (metacritic) {
+                scores.push(parseFloat(metacritic));
+                weights.push(100);
+            }
+
+            if (scores.length > 0) {
+                const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+                combinedScore = (scores.reduce((sum, score, i) => sum + (score * weights[i]), 0) / totalWeight).toFixed(1);
+            }
+        }
+
         // Release date
         const releaseDate = game.rawg__released || game.igdb__first_release_date || 'Unknown';
 
@@ -73,9 +102,7 @@ const GameDetail = {
             <div class="game-detail-header">
                 <h2 class="game-detail-title">${Formatters.escapeHtml(title)}</h2>
                 <div class="game-detail-meta">
-                    ${rawgRating ? `<span class="meta-badge badge-rating" title="RAWG Rating">⭐ ${rawgRating}/5</span>` : ''}
-                    ${igdbRating && igdbRating !== rawgRating ? `<span class="meta-badge badge-rating" title="IGDB Rating" style="background: rgba(250, 112, 154, 0.3)">🎮 ${igdbRating}/5</span>` : ''}
-                    ${metacritic ? `<span class="meta-badge badge-rating" title="Metacritic Score">📊 ${metacritic}/100</span>` : ''}
+                    ${combinedScore ? `<span class="meta-badge badge-rating" title="Combined Rating from all sources">⭐ ${combinedScore}/100</span>` : ''}
                     <span class="meta-badge badge-date">📅 ${releaseDate}</span>
                     ${hasRAWGData ? `<span class="meta-badge" style="background: rgba(102, 126, 234, 0.3); color: #667eea;" title="Synced with RAWG">✓ RAWG</span>` : ''}
                     ${hasIGDBData ? `<span class="meta-badge" style="background: rgba(250, 112, 154, 0.3); color: #fa709a;" title="Synced with IGDB">✓ IGDB</span>` : ''}
@@ -170,23 +197,75 @@ const GameDetail = {
     },
 
     /**
-     * Build comprehensive ratings section
+     * Build comprehensive ratings section with combined score
      */
     _buildRatingsSection(game, rawgRating, igdbRating, metacritic) {
         const hasRatings = rawgRating || igdbRating || metacritic || game.rawg__ratings_count || game.igdb__rating_count;
         if (!hasRatings) return '';
 
+        // Calculate combined score on 0-100 scale
+        let scores = [];
+        let weights = [];
+
+        if (rawgRating) {
+            scores.push(parseFloat(rawgRating) * 20); // Convert 0-5 to 0-100
+            weights.push(game.rawg__ratings_count || 100); // Use review count as weight
+        }
+
+        if (igdbRating) {
+            scores.push(parseFloat(igdbRating) * 20); // Convert 0-5 to 0-100
+            weights.push(game.igdb__rating_count || 50);
+        }
+
+        if (game.igdb__total_rating) {
+            scores.push(parseFloat(game.igdb__total_rating)); // IGDB total rating is already 0-100
+            weights.push(game.igdb__rating_count || 50);
+        }
+
+        if (metacritic) {
+            scores.push(parseFloat(metacritic)); // Metacritic is already 0-100
+            weights.push(100); // Give metacritic a weight of 100 reviews
+        }
+
+        // Calculate weighted average
+        let combinedScore = 0;
+        if (scores.length > 0) {
+            const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+            combinedScore = scores.reduce((sum, score, i) => sum + (score * weights[i]), 0) / totalWeight;
+            combinedScore = combinedScore.toFixed(1);
+        }
+
+        const breakdownId = `rating-breakdown-${Math.random().toString(36).substr(2, 9)}`;
+        const btnId = `rating-btn-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Calculate total reviews (including metacritic as 100 if present)
+        const totalReviews = (game.rawg__ratings_count || 0) + (game.igdb__rating_count || 0) + (game.rawg__reviews_count || 0) + (metacritic ? 100 : 0);
+
         return `
             <div class="game-detail-section">
-                <h3>⭐ Ratings & Reviews</h3>
-                <div class="game-stats">
-                    ${rawgRating ? `<div class="stat-item"><span class="stat-label">RAWG Rating:</span> <span class="stat-value" style="color: #667eea;">${rawgRating}/5.0</span></div>` : ''}
-                    ${igdbRating ? `<div class="stat-item"><span class="stat-label">IGDB Rating:</span> <span class="stat-value" style="color: #fa709a;">${igdbRating}/5.0</span></div>` : ''}
-                    ${game.igdb__total_rating ? `<div class="stat-item"><span class="stat-label">IGDB Aggregated:</span> <span class="stat-value" style="color: #fa709a;">${Formatters.formatIgdbRating(game.igdb__total_rating)}/5.0</span></div>` : ''}
-                    ${metacritic ? `<div class="stat-item"><span class="stat-label">Metacritic:</span> <span class="stat-value" style="color: #ffd700;">${metacritic}/100</span></div>` : ''}
-                    ${game.rawg__ratings_count ? `<div class="stat-item"><span class="stat-label">RAWG Reviews:</span> <span class="stat-value">${Formatters.formatNumber(game.rawg__ratings_count)}</span></div>` : ''}
-                    ${game.igdb__rating_count ? `<div class="stat-item"><span class="stat-label">IGDB Reviews:</span> <span class="stat-value">${Formatters.formatNumber(game.igdb__rating_count)}</span></div>` : ''}
-                    ${game.rawg__reviews_count ? `<div class="stat-item"><span class="stat-label">User Reviews:</span> <span class="stat-value">${Formatters.formatNumber(game.rawg__reviews_count)}</span></div>` : ''}
+                <h3>⭐ Rating</h3>
+                <div style="text-align: center; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 8px;">
+                    <div style="font-size: 3em; font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                        ${combinedScore}/100
+                    </div>
+
+                    <div>
+                        <button id="${btnId}" class="expand-btn" style="margin-top: 5px; font-size: 0.85em; padding: 6px 12px;" onclick="GameDetail.toggleRatingBreakdown('${breakdownId}', '${btnId}')">
+                            📊 Show Breakdown
+                        </button>
+                    </div>
+
+                    <div id="${breakdownId}" class="rating-breakdown" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                        <div style="font-size: 0.85em; color: #999; margin-bottom: 12px; text-align: center;">
+                            📊 Based on ${Formatters.formatNumber(totalReviews)} total reviews
+                        </div>
+
+                        ${rawgRating ? `<div style="font-size: 0.85em; color: #ccc; margin: 4px 0;"><span style="color: #667eea;">⭐ RAWG:</span> ${(parseFloat(rawgRating) * 20).toFixed(1)}/100 ${game.rawg__ratings_count ? `(${Formatters.formatNumber(game.rawg__ratings_count)} reviews)` : ''}</div>` : ''}
+                        ${igdbRating ? `<div style="font-size: 0.85em; color: #ccc; margin: 4px 0;"><span style="color: #fa709a;">🎮 IGDB User:</span> ${(parseFloat(igdbRating) * 20).toFixed(1)}/100 ${game.igdb__rating_count ? `(${Formatters.formatNumber(game.igdb__rating_count)} reviews)` : ''}</div>` : ''}
+                        ${game.igdb__total_rating ? `<div style="font-size: 0.85em; color: #ccc; margin: 4px 0;"><span style="color: #fa709a;">📈 IGDB Critics:</span> ${parseFloat(game.igdb__total_rating).toFixed(1)}/100 (Aggregated)</div>` : ''}
+                        ${metacritic ? `<div style="font-size: 0.85em; color: #ccc; margin: 4px 0;"><span style="color: #ffd700;">📊 Metacritic:</span> ${metacritic}/100</div>` : ''}
+                        ${game.rawg__reviews_count ? `<div style="font-size: 0.85em; color: #ccc; margin: 4px 0;">💬 User Reviews: ${Formatters.formatNumber(game.rawg__reviews_count)}</div>` : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -639,6 +718,30 @@ const GameDetail = {
             // Expand
             element.textContent = fullText;
             button.textContent = 'Show Less';
+            button.classList.add('collapse-btn');
+        }
+    },
+
+    /**
+     * Toggle rating breakdown visibility
+     */
+    toggleRatingBreakdown(breakdownId, buttonId) {
+        const breakdown = document.getElementById(breakdownId);
+        const button = document.getElementById(buttonId);
+
+        if (!breakdown || !button) return;
+
+        const isVisible = breakdown.style.display !== 'none';
+
+        if (isVisible) {
+            // Hide
+            breakdown.style.display = 'none';
+            button.textContent = '📊 Show Breakdown';
+            button.classList.remove('collapse-btn');
+        } else {
+            // Show
+            breakdown.style.display = 'block';
+            button.textContent = '📊 Hide Breakdown';
             button.classList.add('collapse-btn');
         }
     },
