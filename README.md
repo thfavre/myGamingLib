@@ -1,8 +1,8 @@
-# Epic Gaming Library Dashboard
+# Epic Gaming Library
 
 A modern web application for managing and exploring your Epic Games library with rich metadata from multiple gaming databases.
 
-![Epic Gaming Library Dashboard](https://github.com/user-attachments/assets/baef49ee-b1d5-403e-ac26-ec9e91d214e8)
+![Epic Gaming Library](https://github.com/user-attachments/assets/baef49ee-b1d5-403e-ac26-ec9e91d214e8)
 
 ## ✨ Features
 
@@ -10,6 +10,8 @@ A modern web application for managing and exploring your Epic Games library with
 - **Automatic Epic Games Parsing** - Import your entire Epic Games library automatically
 - **Manual Game Addition** - Add games from any platform using RAWG database search
 - **Dual Metadata Sources** - Sync with both RAWG and IGDB for comprehensive game information
+  <img width="366" height="313" alt="image" src="https://github.com/user-attachments/assets/6900ec67-0e03-4714-8c79-f03bc24a7e14" />
+
 - **Rich Game Data** - Ratings, screenshots, achievements, player counts, trailers, genres, and more
 
 ### User Interface
