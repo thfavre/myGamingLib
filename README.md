@@ -1,4 +1,4 @@
-# Epic Games Library Dashboard
+# Epic Gaming Library
 
 A local web application that displays your complete Epic Games library with rich metadata from RAWG API.
 

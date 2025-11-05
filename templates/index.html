@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Epic Games Library Dashboard</title>
+    <title>Epic Gaming Library</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
     <div class="container">
         <!-- Header -->
         <header>
-            <h1>Epic Games Library Dashboard</h1>
+            <h1>Epic Gaming Library</h1>
             <div class="stats-bar" id="statsBar">
                 <div class="stat">
                     <span class="stat-label">Total Games:</span>
@@ -23,14 +23,6 @@
                 <div class="stat">
                     <span class="stat-label">IGDB Synced:</span>
                     <span class="stat-value" id="syncedGamesIgdb">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Local MP:</span>
-                    <span class="stat-value" id="localMpGames">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Online MP:</span>
-                    <span class="stat-value" id="onlineMpGames">0</span>
                 </div>
             </div>
         </header>
@@ -52,10 +44,6 @@
             <button id="addManualBtn" class="btn btn-success">
                 <span class="btn-icon">➕</span>
                 Add Game Manually
-            </button>
-            <button id="refreshBtn" class="btn btn-tertiary">
-                <span class="btn-icon">♻️</span>
-                Refresh Library
             </button>
         </div>
 

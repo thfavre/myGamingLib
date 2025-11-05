@@ -1,4 +1,4 @@
-# Epic Games Library Dashboard
+# Epic Gaming Library
 
 A local web application that displays your complete Epic Games library with rich metadata from RAWG API. Browse your games with detailed information including **local/online player counts**, genres, ratings, screenshots, and more.
 
