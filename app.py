@@ -683,7 +683,7 @@ def sync_single_game(game_id):
 
         if source == 'rawg':
             print(f"\n🔄 RAWG SYNC STARTED FOR: {game_title} (ID: {game_id})")
-            
+
             # Sync with RAWG
             from src.sync.rawg_sync import RAWGSyncer
             syncer = RAWGSyncer()
@@ -715,13 +715,13 @@ def sync_single_game(game_id):
 
             print("📷 Fetching screenshots...")
             screenshots = syncer.get_game_screenshots(rawg_game_id)
-            
+
             print("🏆 Fetching achievements...")
             achievements = syncer.get_game_achievements(rawg_game_id)
-            
+
             print("🎬 Fetching trailers...")
             trailers = syncer.get_game_trailers(rawg_game_id)
-            
+
             print("🛒 Fetching store info...")
             stores = syncer.get_game_stores(rawg_game_id)
 
@@ -735,7 +735,7 @@ def sync_single_game(game_id):
             print("💾 Updating database...")
             from src.database import update_game_with_rawg_data
             success = update_game_with_rawg_data(game_id, metadata)
-            
+
             if success:
                 print(f"✅ RAWG sync complete for: {game_title}")
                 return jsonify({

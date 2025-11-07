@@ -375,18 +375,24 @@ function setupFilterListeners() {
 function clearAllFilters() {
     const gameStore = Alpine.store('games');
 
-    // Reset filter values
-    document.getElementById('searchInput').value = '';
-    document.getElementById('genreFilter').value = '';
-    document.getElementById('playerFilter').value = '';
-    document.getElementById('playerCountFilter').value = '';
-    document.getElementById('sortBy').value = 'title';
+    // Reset filter input values
+    const searchInput = document.getElementById('searchInput');
+    const genreFilter = document.getElementById('genreFilter');
+    const playerCountFilter = document.getElementById('playerCountFilter');
+    const sortBy = document.getElementById('sortBy');
 
-    // Reset store values
+    if (searchInput) searchInput.value = '';
+    if (genreFilter) genreFilter.value = '';
+    if (playerCountFilter) playerCountFilter.value = '';
+    if (sortBy) sortBy.value = 'title';
+
+    // Reset all store filter values
     gameStore.searchQuery = '';
     gameStore.selectedGenre = '';
     gameStore.selectedPlayerFilter = '';
     gameStore.selectedPlayerCount = '';
+    gameStore.selectedLocalPlayers = '';
+    gameStore.selectedOnlinePlayers = '';
     gameStore.sortBy = 'title';
 
     // Reapply filters and render
